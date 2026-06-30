@@ -30,7 +30,8 @@ class GuestMountFilterSetTest(TestCase):
         self.assertEqual(self._f({"read_only": True}).count(), 1)
 
     def test_mp(self):
-        self.assertEqual(self._f({"mp": 0}).count(), 2)
+        # query-param values arrive as strings; int 0 is falsy and skips the filter
+        self.assertEqual(self._f({"mp": "0"}).count(), 2)
 
     def test_search_volume(self):
         self.assertEqual(self._f({"q": "nfs"}).count(), 1)
