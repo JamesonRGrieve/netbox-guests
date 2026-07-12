@@ -12,4 +12,12 @@ urlpatterns = [
     path("mounts/<int:pk>/delete/", views.GuestMountDeleteView.as_view(), name="guestmount_delete"),
     path("mounts/<int:pk>/changelog/", ObjectChangeLogView.as_view(), name="guestmount_changelog", kwargs={"model": models.GuestMount}),
     path("mounts/<int:pk>/journal/", ObjectJournalView.as_view(), name="guestmount_journal", kwargs={"model": models.GuestMount}),
+    path("devices/", views.GuestDeviceListView.as_view(), name="guestdevice_list"),
+    path("devices/add/", views.GuestDeviceEditView.as_view(), name="guestdevice_add"),
+    path("devices/delete/", views.GuestDeviceBulkDeleteView.as_view(), name="guestdevice_bulk_delete"),
+    path("devices/<int:pk>/", views.GuestDeviceView.as_view(), name="guestdevice"),
+    path("devices/<int:pk>/edit/", views.GuestDeviceEditView.as_view(), name="guestdevice_edit"),
+    path("devices/<int:pk>/delete/", views.GuestDeviceDeleteView.as_view(), name="guestdevice_delete"),
+    path("devices/<int:pk>/changelog/", ObjectChangeLogView.as_view(), name="guestdevice_changelog", kwargs={"model": models.GuestDevice}),
+    path("devices/<int:pk>/journal/", ObjectJournalView.as_view(), name="guestdevice_journal", kwargs={"model": models.GuestDevice}),
 ]

@@ -16,6 +16,15 @@ menu = PluginMenu(
                         )
                     ],
                 ),
+                PluginMenuItem(
+                    link="plugins:netbox_guests:guestdevice_list",
+                    link_text="Guest Devices",
+                    buttons=[
+                        PluginMenuButton(
+                            "plugins:netbox_guests:guestdevice_add", "Add", "mdi mdi-plus-thick"
+                        )
+                    ],
+                ),
             ),
         ),
     ),

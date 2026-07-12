@@ -3,7 +3,8 @@ import django_filters
 from django.db.models import Q
 from netbox.filtersets import NetBoxModelFilterSet
 from virtualization.models import VirtualMachine
-from .models import GuestMount
+from .choices import DeviceKindChoices
+from .models import GuestDevice, GuestMount
 
 # Explicit FK filters: django-filter does NOT derive `<fk>_id` from a bare FK in Meta.fields.
 # NetBox convention is `<fk>_id` (by PK) + `<fk>` (by natural key/name).
@@ -25,3 +26,22 @@ class GuestMountFilterSet(NetBoxModelFilterSet):
 
     def search(self, queryset, name, value):
         return queryset.filter(Q(volume__icontains=value) | Q(path__icontains=value))
+
+
+class GuestDeviceFilterSet(NetBoxModelFilterSet):
+    virtual_machine_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="virtual_machine", queryset=VirtualMachine.objects.all(),
+        label="Virtual machine (ID)",
+    )
+    virtual_machine = django_filters.ModelMultipleChoiceFilter(
+        field_name="virtual_machine__name", to_field_name="name",
+        queryset=VirtualMachine.objects.all(), label="Virtual machine (name)",
+    )
+    kind = django_filters.MultipleChoiceFilter(choices=DeviceKindChoices)
+
+    class Meta:
+        model = GuestDevice
+        fields = ["id", "kind", "selector", "index", "mode", "gid"]
+
+    def search(self, queryset, name, value):
+        return queryset.filter(Q(selector__icontains=value) | Q(description__icontains=value))

@@ -6,5 +6,6 @@ app_name = "netbox_guests"
 
 router = NetBoxRouter()
 router.register("mounts", views.GuestMountViewSet)
+router.register("devices", views.GuestDeviceViewSet)
 
 urlpatterns = router.urls

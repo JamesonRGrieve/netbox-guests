@@ -2,7 +2,7 @@
 from netbox.api.serializers import NetBoxModelSerializer
 from rest_framework import serializers
 from virtualization.api.serializers import VirtualMachineSerializer
-from ..models import GuestMount
+from ..models import GuestDevice, GuestMount
 
 
 class GuestMountSerializer(NetBoxModelSerializer):
@@ -16,3 +16,17 @@ class GuestMountSerializer(NetBoxModelSerializer):
             "tags", "custom_fields", "created", "last_updated",
         ]
         brief_fields = ["id", "url", "display", "virtual_machine", "mp", "path"]
+
+
+class GuestDeviceSerializer(NetBoxModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:netbox_guests-api:guestdevice-detail")
+    virtual_machine = VirtualMachineSerializer(nested=True)
+
+    class Meta:
+        model = GuestDevice
+        fields = [
+            "id", "url", "display", "virtual_machine", "kind", "selector", "index",
+            "cgroup_allow", "mount_entry", "mode", "gid", "description",
+            "tags", "custom_fields", "created", "last_updated",
+        ]
+        brief_fields = ["id", "url", "display", "virtual_machine", "kind", "selector", "index"]

@@ -2,7 +2,7 @@
 """REST API CRUD tests (real DB + real API client, no mocks). Composes the explicit CRUD mixins
 (no GraphQL type shipped). The (vm, mp) unique constraint means each row needs a distinct mp."""
 from utilities.testing import APIViewTestCases
-from netbox_guests.models import GuestMount
+from netbox_guests.models import GuestDevice, GuestMount
 from .utils import make_vm
 
 
@@ -33,4 +33,24 @@ class GuestMountAPITest(_CRUD):
             {"virtual_machine": vm.pk, "mp": 10, "volume": "local:10", "path": "/x"},
             {"virtual_machine": vm.pk, "mp": 11, "volume": "local:11", "path": "/y", "read_only": True},
             {"virtual_machine": vm.pk, "mp": 12, "volume": "local:12", "path": "/z"},
+        ]
+
+
+class GuestDeviceAPITest(_CRUD):
+    model = GuestDevice
+    brief_fields = ["display", "id", "index", "kind", "selector", "url", "virtual_machine"]
+    bulk_update_data = {"mode": "0660"}
+
+    @classmethod
+    def setUpTestData(cls):
+        vm = make_vm("api-dev-vm")
+        GuestDevice.objects.bulk_create([
+            GuestDevice(virtual_machine=vm, kind="gpu", selector="/dev/nvidia0", index=0, cgroup_allow="c 195:* rwm"),
+            GuestDevice(virtual_machine=vm, kind="gpu", selector="/dev/nvidia1", index=1, cgroup_allow="c 195:* rwm"),
+            GuestDevice(virtual_machine=vm, kind="usb", selector="2341:0043", index=0),
+        ])
+        cls.create_data = [
+            {"virtual_machine": vm.pk, "kind": "gpu", "selector": "/dev/nvidiactl", "index": 0},
+            {"virtual_machine": vm.pk, "kind": "pci", "selector": "0000:07:00.0", "index": 0},
+            {"virtual_machine": vm.pk, "kind": "tty", "selector": "/dev/ttyUSB0", "index": 0, "cgroup_allow": "c 188:* rwm"},
         ]

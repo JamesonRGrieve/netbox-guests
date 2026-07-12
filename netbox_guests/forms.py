@@ -6,7 +6,8 @@ from utilities.forms.fields import (
 )
 from utilities.forms.rendering import FieldSet
 from virtualization.models import VirtualMachine
-from .models import GuestMount
+from .choices import DeviceKindChoices
+from .models import GuestDevice, GuestMount
 
 
 class GuestMountForm(NetBoxModelForm):
@@ -26,3 +27,28 @@ class GuestMountFilterForm(NetBoxModelFilterSetForm):
     )
     read_only = forms.NullBooleanField(required=False)
     tag = TagFilterField(GuestMount)
+
+
+class GuestDeviceForm(NetBoxModelForm):
+    virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
+
+    fieldsets = (
+        FieldSet("virtual_machine", "kind", "selector", "index", "description", name="Device"),
+        FieldSet("cgroup_allow", "mount_entry", "mode", "gid", name="Raw LXC (fallback)"),
+    )
+
+    class Meta:
+        model = GuestDevice
+        fields = [
+            "virtual_machine", "kind", "selector", "index", "cgroup_allow", "mount_entry",
+            "mode", "gid", "description", "tags",
+        ]
+
+
+class GuestDeviceFilterForm(NetBoxModelFilterSetForm):
+    model = GuestDevice
+    virtual_machine_id = DynamicModelMultipleChoiceField(
+        queryset=VirtualMachine.objects.all(), required=False, label="Virtual machine"
+    )
+    kind = forms.MultipleChoiceField(choices=DeviceKindChoices, required=False)
+    tag = TagFilterField(GuestDevice)
