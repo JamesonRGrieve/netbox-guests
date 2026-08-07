@@ -22,7 +22,7 @@ class GuestMountFilterSet(NetBoxModelFilterSet):
 
     class Meta:
         model = GuestMount
-        fields = ["id", "mp", "volume", "path", "read_only"]
+        fields = ["id", "mp", "volume", "path", "read_only", "backup"]
 
     def search(self, queryset, name, value):
         return queryset.filter(Q(volume__icontains=value) | Q(path__icontains=value))

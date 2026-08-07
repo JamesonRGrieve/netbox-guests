@@ -8,12 +8,13 @@ class GuestMountTable(NetBoxTable):
     virtual_machine = tables.Column(linkify=True)
     path = tables.Column(linkify=True)
     read_only = columns.BooleanColumn()
+    backup = columns.BooleanColumn()
     tags = columns.TagColumn(url_name="plugins:netbox_guests:guestmount_list")
 
     class Meta(NetBoxTable.Meta):
         model = GuestMount
-        fields = ("pk", "id", "virtual_machine", "mp", "volume", "path", "read_only", "tags", "created", "last_updated")
-        default_columns = ("virtual_machine", "mp", "volume", "path", "read_only")
+        fields = ("pk", "id", "virtual_machine", "mp", "volume", "path", "read_only", "backup", "tags", "created", "last_updated")
+        default_columns = ("virtual_machine", "mp", "volume", "path", "read_only", "backup")
 
 
 class GuestDeviceTable(NetBoxTable):

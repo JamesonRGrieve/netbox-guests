@@ -13,11 +13,11 @@ from .models import GuestDevice, GuestMount
 class GuestMountForm(NetBoxModelForm):
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
 
-    fieldsets = (FieldSet("virtual_machine", "mp", "volume", "path", "read_only", name="Mount"),)
+    fieldsets = (FieldSet("virtual_machine", "mp", "volume", "path", "read_only", "backup", name="Mount"),)
 
     class Meta:
         model = GuestMount
-        fields = ["virtual_machine", "mp", "volume", "path", "read_only", "tags"]
+        fields = ["virtual_machine", "mp", "volume", "path", "read_only", "backup", "tags"]
 
 
 class GuestMountFilterForm(NetBoxModelFilterSetForm):
