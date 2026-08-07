@@ -29,7 +29,7 @@ class GuestMount(NetBoxModel):
     )
     path = models.CharField(max_length=255, help_text="In-guest mount path (the mp= target).")
     read_only = models.BooleanField(default=False, help_text="Mount read-only (ro=1).")
-    backup = models.BooleanField(default=True, help_text="Include in vzdump backups (backup=1).")
+    backup = models.BooleanField(default=False, help_text="Include in vzdump backups (backup=1).")
 
     class Meta:
         ordering = ["virtual_machine", "mp"]

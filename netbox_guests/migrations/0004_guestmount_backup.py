@@ -9,6 +9,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="guestmount",
             name="backup",
-            field=models.BooleanField(default=True, help_text="Include in vzdump backups (backup=1)."),
+            field=models.BooleanField(default=False, help_text="Include in vzdump backups (backup=1)."),
         ),
     ]
