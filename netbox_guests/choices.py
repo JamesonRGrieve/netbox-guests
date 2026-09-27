@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Choice sets for the guest models. The only choice domain the plugin owns is the passthrough
-device *kind* (see :class:`netbox_guests.models.GuestDevice`)."""
+"""Choice sets for the guest models: the passthrough device *kind* (see
+:class:`netbox_guests.models.GuestDevice`), the guest kind, the KVM firmware, and the LXC feature
+flags. The last three replace the ``guest-type`` / ``pve-bios`` / ``lxc-features``
+CustomFieldChoiceSets that :class:`netbox_guests.models.GuestProfile` supersedes -- as real
+enumerations on real model fields, so an invalid value is a validation error rather than a string
+that only fails at converge time."""
 from utilities.choices import ChoiceSet
 
 
@@ -20,4 +24,45 @@ class DeviceKindChoices(ChoiceSet):
         (TTY, "TTY / serial", "cyan"),
         (PCI, "PCI", "purple"),
         (OTHER, "Other", "gray"),
+    ]
+
+
+class GuestTypeChoices(ChoiceSet):
+    """Whether the guest is an LXC container or a KVM virtual machine. Both are modeled on core
+    ``virtualization.VirtualMachine``; this is what distinguishes them, and it decides which half
+    of :class:`netbox_guests.models.GuestProfile` applies."""
+    CONTAINER = "container"
+    VM = "vm"
+    CHOICES = [
+        (CONTAINER, "Container (LXC)", "cyan"),
+        (VM, "Virtual Machine (KVM)", "blue"),
+    ]
+
+
+class PveBiosChoices(ChoiceSet):
+    """KVM firmware. ``ovmf`` (UEFI) requires an EFI disk on the guest; ``seabios`` is the
+    PVE default."""
+    SEABIOS = "seabios"
+    OVMF = "ovmf"
+    CHOICES = [
+        (SEABIOS, "SeaBIOS", "gray"),
+        (OVMF, "OVMF (UEFI)", "purple"),
+    ]
+
+
+class LxcFeatureChoices(ChoiceSet):
+    """LXC feature flags (the PVE ``features=`` key). ``nesting`` is what lets a container run
+    containers (podman/docker) and is the one most guests need; the rest widen the container's
+    access to host facilities and are granted per guest, never fleet-wide."""
+    NESTING = "nesting"
+    KEYCTL = "keyctl"
+    FUSE = "fuse"
+    MOUNT = "mount"
+    MKNOD = "mknod"
+    CHOICES = [
+        (NESTING, "nesting", "green"),
+        (KEYCTL, "keyctl", "blue"),
+        (FUSE, "fuse", "cyan"),
+        (MOUNT, "mount", "orange"),
+        (MKNOD, "mknod", "red"),
     ]

@@ -8,14 +8,23 @@ guests** (LXC containers + KVM VMs), consumed by the `jamesonrgrieve/proxmox` To
 *create* guests — **superseding the `netbox-proxbox` sync** (Proxmox→NetBox, wrong direction,
 fields unused).
 
-**Approach (operator decision 2026-06-17): native VM + custom fields, no core fork.** Both guest
-kinds are modeled on core `virtualization.virtual-machine` (distinguished by the `guest_type`
-custom field). The network intent is **native** — `VMInterface` (multi-NIC, MAC, 802.1Q
-`untagged_vlan`) + `ipam.IPAddress` on the interface — and the PVE scalars (`vmid`, `node`,
-`storage`, `bios`, …) are typed **custom fields** installed by the data migration. The only
-relational model this plugin owns is **`GuestMount`** (the repeating `mp0..N` structure that
-does not fit a scalar custom field). This is "native" in the sense of real, typed, queryable
-objects — **NOT** the `config_context` / proxbox CustomField-blob being retired.
+**Approach (operator decision 2026-09-27, superseding 2026-06-17): real plugin models, no core
+fork.** Both guest kinds are modeled on core `virtualization.virtual-machine`; the network intent
+is **native** — `VMInterface` (multi-NIC, MAC, 802.1Q `untagged_vlan`) + `ipam.IPAddress` on the
+interface. Everything else PVE needs is a **model owned by this plugin**:
+
+| Model | Scope | Holds |
+|---|---|---|
+| `GuestProfile` | OneToOne → VirtualMachine | guest kind, VMID, node, pool, storage, boot behaviour, the LXC half, the KVM half, OpenBao *references* |
+| `GuestInterfaceConfig` | OneToOne → VMInterface | `bridge` + explicit `gateway` — the only per-NIC facts with no native home |
+| `GuestMount` | FK → VirtualMachine | repeating `mpN` |
+| `GuestDevice` | FK → VirtualMachine | repeating `devN` / raw-LXC passthrough |
+
+The 2026-06-17 decision put the PVE scalars in typed **custom fields**. They were typed, but they
+were still `extras.CustomField` rows — values in a JSON column, so `node` had no referential
+integrity, `vmid` had no uniqueness, and a container could carry KVM-only intent that PVE would
+silently ignore. The models fix exactly that. `customfields.py` and migration `0002` remain only
+until `0007` drops the fields; **do not add a field there — add a column to the model.**
 
 **Why it matters:** the `hv/pve` Tofu module hardcodes `ip/gw = 192.168.{floor(vlan/10)}.{octet}`
 and `vmid = vlan*1000+octet` because it computes addressing from vlan+octet. That formula cannot
@@ -78,26 +87,32 @@ NetBox holds the structure; OpenBao holds the secret.
 | File | Responsibility |
 |------|----------------|
 | `__init__.py` | `PluginConfig` — name `netbox_guests`, `base_url='guests'`, min/max NetBox version (tracks the sibling fleet; bump in lockstep when prod upgrades) |
-| `customfields.py` | The canonical custom-field SPECS + `install`/`uninstall` (called by the data migration); the CF set installed on `virtualization.virtualmachine` / `.vminterface` |
-| `models.py` | the single `GuestMount` model (FK → `virtualization.VirtualMachine`) |
+| `customfields.py` | SUPERSEDED — the legacy CF SPECS + `install`/`uninstall`, retained until `0007` removes the fields |
+| `models.py` | `GuestProfile`, `GuestInterfaceConfig`, `GuestMount`, `GuestDevice` |
+| `choices.py` | `DeviceKindChoices`, `GuestTypeChoices`, `PveBiosChoices`, `LxcFeatureChoices` — real enumerations, replacing the CustomFieldChoiceSets |
 | `migrations/0001_initial.py` | `GuestMount` table (hand-authored; verify with `makemigrations --check --dry-run`) |
-| `migrations/0002_custom_fields.py` | `RunPython(install, uninstall)` — installs the CFs; depends on `extras __latest__` so the CF tables exist |
+| `migrations/0002_custom_fields.py` | legacy: `RunPython(install, uninstall)` — installs the CFs |
+| `migrations/0005_…` | `GuestProfile` + `GuestInterfaceConfig` tables, unique-VMID constraint |
+| `migrations/0006_custom_fields_to_profile.py` | `RunPython(forward, backward)` — copies each guest's CF values into its profile. Idempotent (skips a guest that already has one) and reversible (writes the values back into `custom_field_data`). Reads `custom_field_data` directly, so it does not depend on the CF definitions still existing |
 | `api/serializers.py`, `api/views.py`, `api/urls.py` | REST API (`NetBoxModelViewSet`) — endpoint `/api/plugins/guests/mounts/` |
 | `filtersets.py` | `NetBoxModelFilterSet`: `virtual_machine_id`/`virtual_machine`, `mp`, `read_only`, search |
 | `tables.py`, `forms.py`, `navigation.py`, `views.py`, `urls.py` | UI layer (generic NetBox views; no custom templates) |
 | `graphql/__init__.py` | placeholder (no bespoke GraphQL type; `NetBoxModel` still exposes auto GraphQL) |
 
-### Model & custom fields — the guest SoT
+### Models — the guest SoT
 - **Core `virtualization.virtual-machine`** (both LXC + KVM): native `name` (= real hostname,
   no `tofu-` prefix), `cluster` (FK — the PVE node/cluster), `status`, `role`, `vcpus`, `memory`,
   `disk`, `primary_ip`, `tags`.
-- **`guest_type`** custom field (select: container | vm) distinguishes the two.
-- **Net intent (native):** one `VMInterface` per NIC + `ipam.IPAddress`; `bridge` + `gateway` are
-  custom fields on the interface (the only homeless net fields).
-- **PVE scalars (custom fields on the VM):** `vmid`, `node` (object → `dcim.Device`), `pool`,
-  `storage`, `onboot`, `root_credential_bao_path`, `cloud_init_user`, `cloud_init_ssh_keys`;
-  LXC: `swap`, `unprivileged`, `features` (multiselect), `ostemplate`; KVM: `image`, `iso`,
-  `bios`, `cpu_type`, `agent`.
+- **`GuestProfile.guest_type`** (container | vm) distinguishes the two and decides which half of
+  the profile applies; `clean()` rejects the other half.
+- **Net intent (native):** one `VMInterface` per NIC + `ipam.IPAddress`; `bridge` + `gateway` live
+  on `GuestInterfaceConfig` (the only homeless net fields).
+- **PVE scalars (`GuestProfile` columns):** `vmid` (unique fleet-wide), `node` (FK → `dcim.Device`,
+  PROTECT), `pool`, `storage`, `onboot`, `start`, `sandbox_of` (FK → the prod guest this copies),
+  `description_template`; LXC: `swap`, `unprivileged` (default **true**), `features`, `ostemplate`;
+  KVM: `template`, `image`, `iso`, `bios`, `cpu_type`, `sockets`, `numa`, `agent`, `cloud_init`.
+- **Credentials:** `bao_secret_path` plus `has_admin_password` / `has_admin_token` /
+  `has_db_password` / `has_secret_key`. A path and four existence flags — never a value.
 - **`GuestMount`** (FK → VirtualMachine): `mp`, `volume`, `path`, `read_only`; unique per
   `(virtual_machine, mp)`; CASCADE on VM delete. The host-side existence of the backing
   volume/dir is owned by Ansible/host bootstrap, not here.

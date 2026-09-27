@@ -1,5 +1,16 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Canonical custom-field definitions for the guest layer, installed on core
+"""SUPERSEDED — kept only until migration 0007 drops these fields.
+
+:class:`netbox_guests.models.GuestProfile` and
+:class:`netbox_guests.models.GuestInterfaceConfig` are now the home for everything below:
+real columns, a real FK for ``node``, a real unique constraint on ``vmid``, and validation that
+rejects intent belonging to the other guest kind. Migration 0006 copied every value across;
+these custom fields stay installed ONLY so consumers that still read
+``custom_fields`` keep working during the switchover, and 0007 removes them once none do.
+
+DO NOT ADD A FIELD HERE. Add a column to the model.
+
+Original description: canonical custom-field definitions for the guest layer, installed on core
 ``virtualization.virtualmachine`` and ``virtualization.vminterface`` by the data migration
 (:func:`install`) and asserted by ``tests/test_customfields.py``.
 

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netbox-guests"
-version = "0.0.1"
+version = "0.2.0"
 description = "Native NetBox source of truth for Proxmox guests (LXC + KVM): native VM + custom fields, consumed by the proxmox Tofu provider"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -1,8 +1,14 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """GuestMount filterset tests against a real DB: FK-by-id, FK-by-name, boolean, exact, search."""
 from django.test import TestCase
-from netbox_guests.filtersets import GuestDeviceFilterSet, GuestMountFilterSet
-from netbox_guests.models import GuestDevice, GuestMount
+from virtualization.models import VMInterface
+from netbox_guests.filtersets import (
+    GuestDeviceFilterSet, GuestInterfaceConfigFilterSet, GuestMountFilterSet,
+    GuestProfileFilterSet,
+)
+from netbox_guests.models import (
+    GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+)
 from .utils import make_vm
 
 
@@ -68,3 +74,73 @@ class GuestDeviceFilterSetTest(TestCase):
 
     def test_search_description(self):
         self.assertEqual(self._f({"q": "second gpu"}).count(), 1)
+
+
+class GuestProfileFilterSetTest(TestCase):
+    """Filters the pipeline and the UI actually use: by guest, by node, by kind, by VMID."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from .test_profile import make_device
+        cls.node = make_device("filter-node")
+        cls.ct = GuestProfile.objects.create(
+            virtual_machine=make_vm("f-ct"), guest_type="container", vmid=7001,
+            node=cls.node, storage="local-zfs", onboot=True,
+        )
+        cls.kvm = GuestProfile.objects.create(
+            virtual_machine=make_vm("f-kvm"), guest_type="vm", vmid=7002,
+            cpu_type="host", unprivileged=False,
+        )
+
+    def _f(self, params):
+        return GuestProfileFilterSet(params, queryset=GuestProfile.objects.all()).qs
+
+    def test_by_guest_type(self):
+        self.assertEqual(list(self._f({"guest_type": ["container"]})), [self.ct])
+        self.assertEqual(list(self._f({"guest_type": ["vm"]})), [self.kvm])
+
+    def test_by_vmid(self):
+        self.assertEqual(list(self._f({"vmid": [7002]})), [self.kvm])
+
+    def test_by_node_id_and_name(self):
+        self.assertEqual(list(self._f({"node_id": [self.node.pk]})), [self.ct])
+        self.assertEqual(list(self._f({"node": [self.node.name]})), [self.ct])
+
+    def test_by_virtual_machine_name(self):
+        self.assertEqual(list(self._f({"virtual_machine": ["f-kvm"]})), [self.kvm])
+
+    def test_by_onboot(self):
+        self.assertEqual(list(self._f({"onboot": True})), [self.ct])
+
+    def test_search_matches_guest_name_and_storage(self):
+        self.assertIn(self.ct, self._f({"q": "local-zfs"}))
+        self.assertIn(self.kvm, self._f({"q": "f-kvm"}))
+
+
+class GuestInterfaceConfigFilterSetTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.vm = make_vm("f-iface-vm")
+        cls.if0 = VMInterface.objects.create(virtual_machine=cls.vm, name="eth0")
+        cls.if1 = VMInterface.objects.create(virtual_machine=make_vm("f-iface-vm2"), name="eth0")
+        cls.c0 = GuestInterfaceConfig.objects.create(
+            interface=cls.if0, bridge="vmbr0", gateway="192.0.2.1"
+        )
+        cls.c1 = GuestInterfaceConfig.objects.create(interface=cls.if1, bridge="vmbr77")
+
+    def _f(self, params):
+        return GuestInterfaceConfigFilterSet(
+            params, queryset=GuestInterfaceConfig.objects.all()
+        ).qs
+
+    def test_by_interface_id(self):
+        self.assertEqual(list(self._f({"interface_id": [self.if1.pk]})), [self.c1])
+
+    def test_by_virtual_machine_id(self):
+        self.assertEqual(list(self._f({"virtual_machine_id": [self.vm.pk]})), [self.c0])
+
+    def test_by_bridge(self):
+        self.assertEqual(list(self._f({"bridge": ["vmbr77"]})), [self.c1])
+
+    def test_search_matches_bridge(self):
+        self.assertEqual(list(self._f({"q": "vmbr77"})), [self.c1])

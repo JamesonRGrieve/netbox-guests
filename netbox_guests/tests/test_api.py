@@ -2,7 +2,11 @@
 """REST API CRUD tests (real DB + real API client, no mocks). Composes the explicit CRUD mixins
 (no GraphQL type shipped). The (vm, mp) unique constraint means each row needs a distinct mp."""
 from utilities.testing import APIViewTestCases
-from netbox_guests.models import GuestDevice, GuestMount
+from virtualization.models import VMInterface
+from netbox_guests.models import (
+    GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+)
+from .test_profile import make_device
 from .utils import make_vm
 
 
@@ -53,4 +57,49 @@ class GuestDeviceAPITest(_CRUD):
             {"virtual_machine": vm.pk, "kind": "gpu", "selector": "/dev/nvidiactl", "index": 0},
             {"virtual_machine": vm.pk, "kind": "pci", "selector": "0000:07:00.0", "index": 0},
             {"virtual_machine": vm.pk, "kind": "tty", "selector": "/dev/ttyUSB0", "index": 0, "cgroup_allow": "c 188:* rwm"},
+        ]
+
+
+class GuestProfileAPITest(_CRUD):
+    model = GuestProfile
+    brief_fields = ["display", "guest_type", "id", "url", "virtual_machine", "vmid"]
+    bulk_update_data = {"onboot": True}
+
+    @classmethod
+    def setUpTestData(cls):
+        node = make_device("api-node")
+        for i, name in enumerate(("api-p1", "api-p2", "api-p3")):
+            GuestProfile.objects.create(
+                virtual_machine=make_vm(name), guest_type="container",
+                vmid=9000 + i, node=node, storage="local-zfs",
+            )
+        cls.create_data = [
+            {"virtual_machine": make_vm("api-p4").pk, "guest_type": "container", "vmid": 9100},
+            {"virtual_machine": make_vm("api-p5").pk, "guest_type": "vm", "vmid": 9101,
+             "bios": "ovmf", "cpu_type": "host", "unprivileged": False},
+            {"virtual_machine": make_vm("api-p6").pk, "guest_type": "container",
+             "storage": "local-lvm"},
+        ]
+
+
+class GuestInterfaceConfigAPITest(_CRUD):
+    model = GuestInterfaceConfig
+    brief_fields = ["bridge", "display", "gateway", "id", "interface", "url"]
+    bulk_update_data = {"bridge": "vmbr9"}
+
+    @classmethod
+    def setUpTestData(cls):
+        vm = make_vm("api-iface-vm")
+        for n in range(3):
+            GuestInterfaceConfig.objects.create(
+                interface=VMInterface.objects.create(virtual_machine=vm, name=f"eth{n}"),
+                bridge=f"vmbr{n}",
+            )
+        cls.create_data = [
+            {"interface": VMInterface.objects.create(virtual_machine=vm, name="eth10").pk,
+             "bridge": "vmbr0", "gateway": "192.0.2.1"},
+            {"interface": VMInterface.objects.create(virtual_machine=vm, name="eth11").pk,
+             "bridge": "vmbr1"},
+            {"interface": VMInterface.objects.create(virtual_machine=vm, name="eth12").pk,
+             "gateway": "198.51.100.1"},
         ]

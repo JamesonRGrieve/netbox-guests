@@ -5,9 +5,14 @@ from utilities.forms.fields import (
     DynamicModelChoiceField, DynamicModelMultipleChoiceField, TagFilterField,
 )
 from utilities.forms.rendering import FieldSet
-from virtualization.models import VirtualMachine
-from .choices import DeviceKindChoices
-from .models import GuestDevice, GuestMount
+from dcim.models import Device
+from virtualization.models import VMInterface, VirtualMachine
+from .choices import (
+    DeviceKindChoices, GuestTypeChoices, LxcFeatureChoices, PveBiosChoices,
+)
+from .models import (
+    GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+)
 
 
 class GuestMountForm(NetBoxModelForm):
@@ -52,3 +57,63 @@ class GuestDeviceFilterForm(NetBoxModelFilterSetForm):
     )
     kind = forms.MultipleChoiceField(choices=DeviceKindChoices, required=False)
     tag = TagFilterField(GuestDevice)
+
+
+class GuestProfileForm(NetBoxModelForm):
+    virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
+    node = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
+    sandbox_of = DynamicModelChoiceField(queryset=VirtualMachine.objects.all(), required=False)
+
+    fieldsets = (
+        FieldSet("virtual_machine", "guest_type", "vmid", "node", "pool", "storage",
+                 "onboot", "start", name="Guest"),
+        FieldSet("swap", "unprivileged", "features", "ostemplate", name="Container (LXC)"),
+        FieldSet("template", "image", "iso", "bios", "cpu_type", "sockets", "numa", "agent",
+                 "cloud_init", name="Virtual machine (KVM)"),
+        FieldSet("bao_secret_path", "has_admin_password", "has_admin_token", "has_db_password",
+                 "has_secret_key", name="Credentials (references only)"),
+        FieldSet("sandbox_of", "description_template", name="Provenance"),
+    )
+
+    class Meta:
+        model = GuestProfile
+        fields = [
+            "virtual_machine", "guest_type", "vmid", "node", "pool", "storage", "onboot",
+            "start", "swap", "unprivileged", "features", "ostemplate", "template", "image",
+            "iso", "bios", "cpu_type", "sockets", "numa", "agent", "cloud_init",
+            "bao_secret_path", "has_admin_password", "has_admin_token", "has_db_password",
+            "has_secret_key", "sandbox_of", "description_template", "tags",
+        ]
+
+
+class GuestProfileFilterForm(NetBoxModelFilterSetForm):
+    model = GuestProfile
+    virtual_machine_id = DynamicModelMultipleChoiceField(
+        queryset=VirtualMachine.objects.all(), required=False, label="Virtual machine"
+    )
+    node_id = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(), required=False, label="PVE node"
+    )
+    guest_type = forms.MultipleChoiceField(choices=GuestTypeChoices, required=False)
+    bios = forms.MultipleChoiceField(choices=PveBiosChoices, required=False)
+    onboot = forms.NullBooleanField(required=False)
+    unprivileged = forms.NullBooleanField(required=False)
+    tag = TagFilterField(GuestProfile)
+
+
+class GuestInterfaceConfigForm(NetBoxModelForm):
+    interface = DynamicModelChoiceField(queryset=VMInterface.objects.all())
+
+    fieldsets = (FieldSet("interface", "bridge", "gateway", name="Guest NIC"),)
+
+    class Meta:
+        model = GuestInterfaceConfig
+        fields = ["interface", "bridge", "gateway", "tags"]
+
+
+class GuestInterfaceConfigFilterForm(NetBoxModelFilterSetForm):
+    model = GuestInterfaceConfig
+    virtual_machine_id = DynamicModelMultipleChoiceField(
+        queryset=VirtualMachine.objects.all(), required=False, label="Virtual machine"
+    )
+    tag = TagFilterField(GuestInterfaceConfig)
