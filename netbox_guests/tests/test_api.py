@@ -10,17 +10,24 @@ from .test_profile import make_device
 from .utils import make_vm
 
 
-class _CRUD(
+class _PluginAPI:
+    """Plugin API views live under the `plugins-api:` namespace. A plain mixin, not a TestCase,
+    so the runner never collects it as a model-less test class."""
+
+    view_namespace = "plugins-api:netbox_guests"
+
+
+_CRUD = (
+    _PluginAPI,
     APIViewTestCases.GetObjectViewTestCase,
     APIViewTestCases.ListObjectsViewTestCase,
     APIViewTestCases.CreateObjectViewTestCase,
     APIViewTestCases.UpdateObjectViewTestCase,
     APIViewTestCases.DeleteObjectViewTestCase,
-):
-    pass
+)
 
 
-class GuestMountAPITest(_CRUD):
+class GuestMountAPITest(*_CRUD):
     model = GuestMount
     brief_fields = ["display", "id", "mp", "path", "url", "virtual_machine"]
     bulk_update_data = {"read_only": True}
@@ -35,12 +42,15 @@ class GuestMountAPITest(_CRUD):
         ])
         cls.create_data = [
             {"virtual_machine": vm.pk, "mp": 10, "volume": "local:10", "path": "/x"},
-            {"virtual_machine": vm.pk, "mp": 11, "volume": "local:11", "path": "/y", "read_only": True},
+            {
+                "virtual_machine": vm.pk, "mp": 11, "volume": "local:11", "path": "/y",
+                "read_only": True,
+            },
             {"virtual_machine": vm.pk, "mp": 12, "volume": "local:12", "path": "/z"},
         ]
 
 
-class GuestDeviceAPITest(_CRUD):
+class GuestDeviceAPITest(*_CRUD):
     model = GuestDevice
     brief_fields = ["display", "id", "index", "kind", "selector", "url", "virtual_machine"]
     bulk_update_data = {"mode": "0660"}
@@ -49,18 +59,27 @@ class GuestDeviceAPITest(_CRUD):
     def setUpTestData(cls):
         vm = make_vm("api-dev-vm")
         GuestDevice.objects.bulk_create([
-            GuestDevice(virtual_machine=vm, kind="gpu", selector="/dev/nvidia0", index=0, cgroup_allow="c 195:* rwm"),
-            GuestDevice(virtual_machine=vm, kind="gpu", selector="/dev/nvidia1", index=1, cgroup_allow="c 195:* rwm"),
+            GuestDevice(
+                virtual_machine=vm, kind="gpu", selector="/dev/nvidia0", index=0,
+                cgroup_allow="c 195:* rwm",
+            ),
+            GuestDevice(
+                virtual_machine=vm, kind="gpu", selector="/dev/nvidia1", index=1,
+                cgroup_allow="c 195:* rwm",
+            ),
             GuestDevice(virtual_machine=vm, kind="usb", selector="2341:0043", index=0),
         ])
         cls.create_data = [
             {"virtual_machine": vm.pk, "kind": "gpu", "selector": "/dev/nvidiactl", "index": 0},
             {"virtual_machine": vm.pk, "kind": "pci", "selector": "0000:07:00.0", "index": 0},
-            {"virtual_machine": vm.pk, "kind": "tty", "selector": "/dev/ttyUSB0", "index": 0, "cgroup_allow": "c 188:* rwm"},
+            {
+                "virtual_machine": vm.pk, "kind": "tty", "selector": "/dev/ttyUSB0", "index": 0,
+                "cgroup_allow": "c 188:* rwm",
+            },
         ]
 
 
-class GuestProfileAPITest(_CRUD):
+class GuestProfileAPITest(*_CRUD):
     model = GuestProfile
     brief_fields = ["display", "guest_type", "id", "url", "virtual_machine", "vmid"]
     bulk_update_data = {"onboot": True}
@@ -82,7 +101,7 @@ class GuestProfileAPITest(_CRUD):
         ]
 
 
-class GuestInterfaceConfigAPITest(_CRUD):
+class GuestInterfaceConfigAPITest(*_CRUD):
     model = GuestInterfaceConfig
     brief_fields = ["bridge", "display", "gateway", "id", "interface", "url"]
     bulk_update_data = {"bridge": "vmbr9"}

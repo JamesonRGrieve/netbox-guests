@@ -8,7 +8,8 @@ the parent VM / interface.
 """
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.utils import IntegrityError, ProtectedError
+from django.db.models import ProtectedError
+from django.db.utils import IntegrityError
 from django.test import TestCase
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from virtualization.models import VMInterface
