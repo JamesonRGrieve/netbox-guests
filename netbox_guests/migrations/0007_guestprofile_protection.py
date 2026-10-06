@@ -14,6 +14,7 @@ class Migration(migrations.Migration):
             name="protection",
             field=models.BooleanField(
                 default=False,
+                db_default=False,
                 help_text="PVE protection flag: the guest and its disks cannot be removed until "
                 "it is cleared. Set on control-plane guests.",
             ),

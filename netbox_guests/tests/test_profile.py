@@ -42,6 +42,12 @@ class GuestProfileModelTest(TestCase):
         self.assertFalse(p.protection, "protection must default false — set per guest")
         self.assertEqual(p.features, [])
 
+    def test_protection_has_a_database_default(self):
+        # Code that predates the column (a v0.2.0 rollback) inserts without it; only a
+        # database-level default keeps those inserts valid.
+        db_default = GuestProfile._meta.get_field("protection").db_default
+        self.assertIs(getattr(db_default, "value", db_default), False)
+
     def test_protection_applies_to_both_guest_kinds(self):
         kinds = (("ct-prot", GuestTypeChoices.CONTAINER), ("vm-prot", GuestTypeChoices.VM))
         for name, kind in kinds:

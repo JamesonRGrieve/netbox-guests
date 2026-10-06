@@ -168,8 +168,11 @@ class GuestProfile(NetBoxModel):
     start = models.BooleanField(
         default=False, help_text="Start the guest immediately on creation."
     )
+    # db_default keeps the column insertable by code that predates it, so rolling the plugin
+    # back to v0.2.0 over a migrated database needs no restore.
     protection = models.BooleanField(
         default=False,
+        db_default=False,
         help_text="PVE protection flag: the guest and its disks cannot be removed until it is "
                   "cleared. Set on control-plane guests.",
     )
