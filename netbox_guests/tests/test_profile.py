@@ -39,7 +39,16 @@ class GuestProfileModelTest(TestCase):
         self.assertEqual(str(p), f"{self.vm}: Container (LXC)")
         self.assertIn("/plugins/guests/profiles/", p.get_absolute_url())
         self.assertTrue(p.unprivileged, "unprivileged must default true — privileged is opt-out")
+        self.assertFalse(p.protection, "protection must default false — set per guest")
         self.assertEqual(p.features, [])
+
+    def test_protection_applies_to_both_guest_kinds(self):
+        kinds = (("ct-prot", GuestTypeChoices.CONTAINER), ("vm-prot", GuestTypeChoices.VM))
+        for name, kind in kinds:
+            p = GuestProfile(virtual_machine=make_vm(name), guest_type=kind, protection=True)
+            p.full_clean()
+            p.save()
+            self.assertTrue(GuestProfile.objects.get(pk=p.pk).protection)
 
     def test_vmid_unique_fleet_wide(self):
         GuestProfile.objects.create(

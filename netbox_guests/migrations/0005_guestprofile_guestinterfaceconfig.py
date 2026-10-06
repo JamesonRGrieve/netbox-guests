@@ -4,7 +4,7 @@
 #
 # Adds the two models that supersede this plugin's per-VM and per-VMInterface custom fields:
 # GuestProfile (OneToOne VirtualMachine) and GuestInterfaceConfig (OneToOne VMInterface). Schema
-# only -- 0006 copies the existing custom-field values into these rows, and 0007 removes the
+# only -- 0006 copies the existing custom-field values into these rows, and 0008 removes the
 # custom fields once nothing reads them.
 import django.contrib.postgres.fields
 import django.core.serializers.json

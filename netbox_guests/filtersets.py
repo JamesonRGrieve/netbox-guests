@@ -5,7 +5,7 @@ from netbox.filtersets import NetBoxModelFilterSet
 from dcim.models import Device
 from virtualization.models import VMInterface, VirtualMachine
 from .choices import (
-    DeviceKindChoices, GuestTypeChoices, LxcFeatureChoices, PveBiosChoices,
+    DeviceKindChoices, GuestTypeChoices, PveBiosChoices,
 )
 from .models import (
     GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
@@ -78,7 +78,7 @@ class GuestProfileFilterSet(NetBoxModelFilterSet):
     class Meta:
         model = GuestProfile
         fields = [
-            "id", "vmid", "pool", "storage", "onboot", "start", "bao_secret_path",
+            "id", "vmid", "pool", "storage", "onboot", "start", "protection", "bao_secret_path",
             "has_admin_password", "has_admin_token", "has_db_password", "has_secret_key",
             "swap", "unprivileged", "ostemplate", "template", "image", "iso", "cpu_type",
             "sockets", "numa", "agent", "cloud_init",

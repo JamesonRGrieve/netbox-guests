@@ -24,7 +24,7 @@ The 2026-06-17 decision put the PVE scalars in typed **custom fields**. They wer
 were still `extras.CustomField` rows — values in a JSON column, so `node` had no referential
 integrity, `vmid` had no uniqueness, and a container could carry KVM-only intent that PVE would
 silently ignore. The models fix exactly that. `customfields.py` and migration `0002` remain only
-until `0007` drops the fields; **do not add a field there — add a column to the model.**
+until `0008` drops the fields; **do not add a field there — add a column to the model.**
 
 **Why it matters:** the `hv/pve` Tofu module hardcodes `ip/gw = 192.168.{floor(vlan/10)}.{octet}`
 and `vmid = vlan*1000+octet` because it computes addressing from vlan+octet. That formula cannot
@@ -87,7 +87,7 @@ NetBox holds the structure; OpenBao holds the secret.
 | File | Responsibility |
 |------|----------------|
 | `__init__.py` | `PluginConfig` — name `netbox_guests`, `base_url='guests'`, min/max NetBox version (tracks the sibling fleet; bump in lockstep when prod upgrades) |
-| `customfields.py` | SUPERSEDED — the legacy CF SPECS + `install`/`uninstall`, retained until `0007` removes the fields |
+| `customfields.py` | SUPERSEDED — the legacy CF SPECS + `install`/`uninstall`, retained until `0008` removes the fields |
 | `models.py` | `GuestProfile`, `GuestInterfaceConfig`, `GuestMount`, `GuestDevice` |
 | `choices.py` | `DeviceKindChoices`, `GuestTypeChoices`, `PveBiosChoices`, `LxcFeatureChoices` — real enumerations, replacing the CustomFieldChoiceSets |
 | `migrations/0001_initial.py` | `GuestMount` table (hand-authored; verify with `makemigrations --check --dry-run`) |

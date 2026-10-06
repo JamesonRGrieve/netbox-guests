@@ -20,7 +20,9 @@ class GuestMountFilterSetTest(TestCase):
         cls.vm1 = make_vm("fvm1")
         cls.vm2 = make_vm("fvm2", cluster_name="backup")
         GuestMount.objects.create(virtual_machine=cls.vm1, mp=0, volume="local:0", path="/data")
-        GuestMount.objects.create(virtual_machine=cls.vm1, mp=1, volume="nfs:share", path="/srv", read_only=True)
+        GuestMount.objects.create(
+            virtual_machine=cls.vm1, mp=1, volume="nfs:share", path="/srv", read_only=True
+        )
         GuestMount.objects.create(virtual_machine=cls.vm2, mp=0, volume="local:0", path="/var")
 
     def _f(self, params):
@@ -50,9 +52,17 @@ class GuestDeviceFilterSetTest(TestCase):
     def setUpTestData(cls):
         cls.vm1 = make_vm("dfvm1")
         cls.vm2 = make_vm("dfvm2", cluster_name="backup")
-        GuestDevice.objects.create(virtual_machine=cls.vm1, kind="gpu", selector="/dev/nvidia0", index=0, cgroup_allow="c 195:* rwm")
-        GuestDevice.objects.create(virtual_machine=cls.vm1, kind="gpu", selector="/dev/nvidia1", index=1, description="second gpu")
-        GuestDevice.objects.create(virtual_machine=cls.vm2, kind="usb", selector="2341:0043", index=0)
+        GuestDevice.objects.create(
+            virtual_machine=cls.vm1, kind="gpu", selector="/dev/nvidia0", index=0,
+            cgroup_allow="c 195:* rwm",
+        )
+        GuestDevice.objects.create(
+            virtual_machine=cls.vm1, kind="gpu", selector="/dev/nvidia1", index=1,
+            description="second gpu",
+        )
+        GuestDevice.objects.create(
+            virtual_machine=cls.vm2, kind="usb", selector="2341:0043", index=0
+        )
 
     def _f(self, params):
         return GuestDeviceFilterSet(params, self.queryset).qs
@@ -85,7 +95,7 @@ class GuestProfileFilterSetTest(TestCase):
         cls.node = make_device("filter-node")
         cls.ct = GuestProfile.objects.create(
             virtual_machine=make_vm("f-ct"), guest_type="container", vmid=7001,
-            node=cls.node, storage="local-zfs", onboot=True,
+            node=cls.node, storage="local-zfs", onboot=True, protection=True,
         )
         cls.kvm = GuestProfile.objects.create(
             virtual_machine=make_vm("f-kvm"), guest_type="vm", vmid=7002,
@@ -111,6 +121,10 @@ class GuestProfileFilterSetTest(TestCase):
 
     def test_by_onboot(self):
         self.assertEqual(list(self._f({"onboot": True})), [self.ct])
+
+    def test_by_protection(self):
+        self.assertEqual(list(self._f({"protection": True})), [self.ct])
+        self.assertEqual(list(self._f({"protection": False})), [self.kvm])
 
     def test_search_matches_guest_name_and_storage(self):
         self.assertIn(self.ct, self._f({"q": "local-zfs"}))

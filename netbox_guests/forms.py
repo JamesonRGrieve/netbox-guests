@@ -8,7 +8,7 @@ from utilities.forms.rendering import FieldSet
 from dcim.models import Device
 from virtualization.models import VMInterface, VirtualMachine
 from .choices import (
-    DeviceKindChoices, GuestTypeChoices, LxcFeatureChoices, PveBiosChoices,
+    DeviceKindChoices, GuestTypeChoices, PveBiosChoices,
 )
 from .models import (
     GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
@@ -18,7 +18,9 @@ from .models import (
 class GuestMountForm(NetBoxModelForm):
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
 
-    fieldsets = (FieldSet("virtual_machine", "mp", "volume", "path", "read_only", "backup", name="Mount"),)
+    fieldsets = (
+        FieldSet("virtual_machine", "mp", "volume", "path", "read_only", "backup", name="Mount"),
+    )
 
     class Meta:
         model = GuestMount
@@ -66,7 +68,7 @@ class GuestProfileForm(NetBoxModelForm):
 
     fieldsets = (
         FieldSet("virtual_machine", "guest_type", "vmid", "node", "pool", "storage",
-                 "onboot", "start", name="Guest"),
+                 "onboot", "start", "protection", name="Guest"),
         FieldSet("swap", "unprivileged", "features", "ostemplate", name="Container (LXC)"),
         FieldSet("template", "image", "iso", "bios", "cpu_type", "sockets", "numa", "agent",
                  "cloud_init", name="Virtual machine (KVM)"),
@@ -79,8 +81,8 @@ class GuestProfileForm(NetBoxModelForm):
         model = GuestProfile
         fields = [
             "virtual_machine", "guest_type", "vmid", "node", "pool", "storage", "onboot",
-            "start", "swap", "unprivileged", "features", "ostemplate", "template", "image",
-            "iso", "bios", "cpu_type", "sockets", "numa", "agent", "cloud_init",
+            "start", "protection", "swap", "unprivileged", "features", "ostemplate", "template",
+            "image", "iso", "bios", "cpu_type", "sockets", "numa", "agent", "cloud_init",
             "bao_secret_path", "has_admin_password", "has_admin_token", "has_db_password",
             "has_secret_key", "sandbox_of", "description_template", "tags",
         ]
@@ -97,6 +99,7 @@ class GuestProfileFilterForm(NetBoxModelFilterSetForm):
     guest_type = forms.MultipleChoiceField(choices=GuestTypeChoices, required=False)
     bios = forms.MultipleChoiceField(choices=PveBiosChoices, required=False)
     onboot = forms.NullBooleanField(required=False)
+    protection = forms.NullBooleanField(required=False)
     unprivileged = forms.NullBooleanField(required=False)
     tag = TagFilterField(GuestProfile)
 

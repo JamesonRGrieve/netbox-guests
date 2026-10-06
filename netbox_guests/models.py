@@ -85,7 +85,8 @@ class GuestDevice(NetBoxModel):
         ),
     )
     index = models.PositiveSmallIntegerField(
-        default=0, help_text="Ordering index (dev0/dev1…); distinguishes multiple GPUs on one guest."
+        default=0,
+        help_text="Ordering index (dev0/dev1…); distinguishes multiple GPUs on one guest.",
     )
     cgroup_allow = models.CharField(
         max_length=255, blank=True,
@@ -166,6 +167,11 @@ class GuestProfile(NetBoxModel):
     onboot = models.BooleanField(default=False, help_text="Start the guest when the node boots.")
     start = models.BooleanField(
         default=False, help_text="Start the guest immediately on creation."
+    )
+    protection = models.BooleanField(
+        default=False,
+        help_text="PVE protection flag: the guest and its disks cannot be removed until it is "
+                  "cleared. Set on control-plane guests.",
     )
     sandbox_of = models.ForeignKey(
         "virtualization.VirtualMachine", on_delete=models.SET_NULL, null=True, blank=True,
@@ -259,7 +265,9 @@ class GuestProfile(NetBoxModel):
         """Reject intent that belongs to the other guest kind. PVE would silently ignore it, which
         is worse than failing here -- the SoT would claim something the guest does not have."""
         super().clean()
-        container_only = {"swap": self.swap, "features": self.features, "ostemplate": self.ostemplate}
+        container_only = {
+            "swap": self.swap, "features": self.features, "ostemplate": self.ostemplate,
+        }
         vm_only = {
             "image": self.image, "iso": self.iso, "bios": self.bios, "cpu_type": self.cpu_type,
             "numa": self.numa, "agent": self.agent,
@@ -271,7 +279,9 @@ class GuestProfile(NetBoxModel):
                     {k: "Not applicable to a container guest." for k in offenders}
                 )
         elif self.guest_type == GuestTypeChoices.VM:
-            offenders = sorted(k for k, v in container_only.items() if v not in (None, "", False, []))
+            offenders = sorted(
+                k for k, v in container_only.items() if v not in (None, "", False, [])
+            )
             if offenders:
                 raise ValidationError(
                     {k: "Not applicable to a KVM guest." for k in offenders}

@@ -9,7 +9,7 @@
 #
 # It is also REVERSIBLE: the backward pass writes the model values back into custom_field_data and
 # deletes the rows, so a rollback restores exactly what the custom fields held. That matters
-# because the custom fields are NOT dropped here -- 0007 does that, only once every consumer reads
+# because the custom fields are NOT dropped here -- 0008 does that, only once every consumer reads
 # the models.
 from django.db import migrations
 

@@ -149,7 +149,7 @@ class ProfileMigrationTest(TestCase):
         vm.custom_field_data = dict(original)
         vm.save()
         self._run_forward()
-        # Simulate 0007 having cleared the custom fields before a rollback.
+        # Simulate 0008 having cleared the custom fields before a rollback.
         vm.custom_field_data = {}
         vm.save()
 

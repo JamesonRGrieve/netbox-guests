@@ -15,7 +15,10 @@ class GuestMountTable(NetBoxTable):
 
     class Meta(NetBoxTable.Meta):
         model = GuestMount
-        fields = ("pk", "id", "virtual_machine", "mp", "volume", "path", "read_only", "backup", "tags", "created", "last_updated")
+        fields = (
+            "pk", "id", "virtual_machine", "mp", "volume", "path", "read_only", "backup", "tags",
+            "created", "last_updated",
+        )
         default_columns = ("virtual_machine", "mp", "volume", "path", "read_only", "backup")
 
 
@@ -41,6 +44,7 @@ class GuestProfileTable(NetBoxTable):
     sandbox_of = tables.Column(linkify=True)
     onboot = columns.BooleanColumn()
     start = columns.BooleanColumn()
+    protection = columns.BooleanColumn()
     unprivileged = columns.BooleanColumn()
     numa = columns.BooleanColumn()
     agent = columns.BooleanColumn()
@@ -51,9 +55,9 @@ class GuestProfileTable(NetBoxTable):
         model = GuestProfile
         fields = (
             "pk", "id", "virtual_machine", "guest_type", "vmid", "node", "pool", "storage",
-            "onboot", "start", "sandbox_of", "swap", "unprivileged", "features", "ostemplate",
-            "template", "image", "iso", "bios", "cpu_type", "sockets", "numa", "agent",
-            "cloud_init", "bao_secret_path", "tags", "created", "last_updated",
+            "onboot", "start", "protection", "sandbox_of", "swap", "unprivileged", "features",
+            "ostemplate", "template", "image", "iso", "bios", "cpu_type", "sockets", "numa",
+            "agent", "cloud_init", "bao_secret_path", "tags", "created", "last_updated",
         )
         default_columns = (
             "virtual_machine", "guest_type", "vmid", "node", "storage", "onboot", "unprivileged",
