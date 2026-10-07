@@ -9,5 +9,6 @@ router.register("mounts", views.GuestMountViewSet)
 router.register("devices", views.GuestDeviceViewSet)
 router.register("profiles", views.GuestProfileViewSet)
 router.register("interface-configs", views.GuestInterfaceConfigViewSet)
+router.register("backup-jobs", views.BackupJobViewSet)
 
 urlpatterns = router.urls

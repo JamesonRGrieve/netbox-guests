@@ -35,6 +35,15 @@ menu = PluginMenu(
                     ],
                 ),
                 PluginMenuItem(
+                    link="plugins:netbox_guests:backupjob_list",
+                    link_text="Backup Jobs",
+                    buttons=[
+                        PluginMenuButton(
+                            "plugins:netbox_guests:backupjob_add", "Add", "mdi mdi-plus-thick"
+                        )
+                    ],
+                ),
+                PluginMenuItem(
                     link="plugins:netbox_guests:guestdevice_list",
                     link_text="Guest Devices",
                     buttons=[

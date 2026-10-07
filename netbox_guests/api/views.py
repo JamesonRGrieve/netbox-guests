@@ -2,11 +2,11 @@
 from netbox.api.viewsets import NetBoxModelViewSet
 from .. import filtersets
 from ..models import (
-    GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
 )
 from .serializers import (
-    GuestDeviceSerializer, GuestInterfaceConfigSerializer, GuestMountSerializer,
-    GuestProfileSerializer,
+    BackupJobSerializer, GuestDeviceSerializer, GuestInterfaceConfigSerializer,
+    GuestMountSerializer, GuestProfileSerializer,
 )
 
 
@@ -24,10 +24,16 @@ class GuestDeviceViewSet(NetBoxModelViewSet):
 
 class GuestProfileViewSet(NetBoxModelViewSet):
     queryset = GuestProfile.objects.prefetch_related(
-        "virtual_machine", "node", "sandbox_of", "tags"
+        "virtual_machine", "node", "sandbox_of", "backup_job", "tags"
     )
     serializer_class = GuestProfileSerializer
     filterset_class = filtersets.GuestProfileFilterSet
+
+
+class BackupJobViewSet(NetBoxModelViewSet):
+    queryset = BackupJob.objects.prefetch_related("node", "guests", "tags")
+    serializer_class = BackupJobSerializer
+    filterset_class = filtersets.BackupJobFilterSet
 
 
 class GuestInterfaceConfigViewSet(NetBoxModelViewSet):

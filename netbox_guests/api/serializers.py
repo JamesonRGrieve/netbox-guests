@@ -6,7 +6,7 @@ from virtualization.api.serializers import (
     VMInterfaceSerializer, VirtualMachineSerializer,
 )
 from ..models import (
-    GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
 )
 
 
@@ -44,17 +44,37 @@ class GuestDeviceSerializer(NetBoxModelSerializer):
         brief_fields = ["id", "url", "display", "virtual_machine", "kind", "selector", "index"]
 
 
+class BackupJobSerializer(NetBoxModelSerializer):
+    url = _detail_url("backupjob")
+    node = DeviceSerializer(nested=True)
+    vmids = serializers.ListField(
+        child=serializers.IntegerField(), read_only=True,
+        help_text="Derived: the VMIDs of the guest profiles pointing at this job, ascending.",
+    )
+
+    class Meta:
+        model = BackupJob
+        fields = (
+            "id", "url", "display", "node", "job_id", "storage", "schedule", "mode", "enabled",
+            "notes_template", "repeat_missed", "notification_mode", "vmids",
+            "description", "tags", "custom_fields", "created", "last_updated",
+        )
+        brief_fields = ("id", "url", "display", "node", "job_id")
+
+
 class GuestProfileSerializer(NetBoxModelSerializer):
     url = _detail_url("guestprofile")
     virtual_machine = VirtualMachineSerializer(nested=True)
     node = DeviceSerializer(nested=True, required=False, allow_null=True)
     sandbox_of = VirtualMachineSerializer(nested=True, required=False, allow_null=True)
+    backup_job = BackupJobSerializer(nested=True, required=False, allow_null=True)
 
     class Meta:
         model = GuestProfile
         fields = [
             "id", "url", "display", "virtual_machine", "guest_type", "vmid", "node", "pool",
-            "storage", "onboot", "start", "protection", "sandbox_of", "description_template",
+            "storage", "onboot", "start", "protection", "sandbox_of", "backup_job",
+            "description_template",
             "bao_secret_path", "has_admin_password", "has_admin_token", "has_db_password",
             "has_secret_key", "swap", "unprivileged", "features", "ostemplate", "template",
             "image", "iso", "bios", "cpu_type", "sockets", "numa", "agent", "cloud_init",

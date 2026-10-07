@@ -19,12 +19,13 @@ interface. Everything else PVE needs is a **model owned by this plugin**:
 | `GuestInterfaceConfig` | OneToOne → VMInterface | `bridge` + explicit `gateway` — the only per-NIC facts with no native home |
 | `GuestMount` | FK → VirtualMachine | repeating `mpN` |
 | `GuestDevice` | FK → VirtualMachine | repeating `devN` / raw-LXC passthrough |
+| `BackupJob` | FK → node (`dcim.Device`) | a PVE scheduled vzdump job (`/cluster/backup/<id>`); its guest list is derived from `GuestProfile.backup_job`, never typed |
 
 The 2026-06-17 decision put the PVE scalars in typed **custom fields**. They were typed, but they
 were still `extras.CustomField` rows — values in a JSON column, so `node` had no referential
 integrity, `vmid` had no uniqueness, and a container could carry KVM-only intent that PVE would
 silently ignore. The models fix exactly that. `customfields.py` and migration `0002` remain only
-until `0008` drops the fields; **do not add a field there — add a column to the model.**
+until a later migration drops the fields; **do not add a field there — add a column to the model.**
 
 **Why it matters:** the `hv/pve` Tofu module hardcodes `ip/gw = 192.168.{floor(vlan/10)}.{octet}`
 and `vmid = vlan*1000+octet` because it computes addressing from vlan+octet. That formula cannot
@@ -87,14 +88,15 @@ NetBox holds the structure; OpenBao holds the secret.
 | File | Responsibility |
 |------|----------------|
 | `__init__.py` | `PluginConfig` — name `netbox_guests`, `base_url='guests'`, min/max NetBox version (tracks the sibling fleet; bump in lockstep when prod upgrades) |
-| `customfields.py` | SUPERSEDED — the legacy CF SPECS + `install`/`uninstall`, retained until `0008` removes the fields |
-| `models.py` | `GuestProfile`, `GuestInterfaceConfig`, `GuestMount`, `GuestDevice` |
-| `choices.py` | `DeviceKindChoices`, `GuestTypeChoices`, `PveBiosChoices`, `LxcFeatureChoices` — real enumerations, replacing the CustomFieldChoiceSets |
+| `customfields.py` | SUPERSEDED — the legacy CF SPECS + `install`/`uninstall`, retained until a later migration removes the fields |
+| `models.py` | `GuestProfile`, `GuestInterfaceConfig`, `GuestMount`, `GuestDevice`, `BackupJob` |
+| `choices.py` | `DeviceKindChoices`, `GuestTypeChoices`, `PveBiosChoices`, `LxcFeatureChoices` (real enumerations replacing the CustomFieldChoiceSets), `BackupModeChoices`, `BackupNotificationModeChoices` |
 | `migrations/0001_initial.py` | `GuestMount` table (hand-authored; verify with `makemigrations --check --dry-run`) |
 | `migrations/0002_custom_fields.py` | legacy: `RunPython(install, uninstall)` — installs the CFs |
 | `migrations/0005_…` | `GuestProfile` + `GuestInterfaceConfig` tables, unique-VMID constraint |
 | `migrations/0006_custom_fields_to_profile.py` | `RunPython(forward, backward)` — copies each guest's CF values into its profile. Idempotent (skips a guest that already has one) and reversible (writes the values back into `custom_field_data`). Reads `custom_field_data` directly, so it does not depend on the CF definitions still existing |
-| `api/serializers.py`, `api/views.py`, `api/urls.py` | REST API (`NetBoxModelViewSet`) — endpoint `/api/plugins/guests/mounts/` |
+| `migrations/0008_backupjob.py` | `BackupJob` table + unique `(node, job_id)` + nullable `GuestProfile.backup_job` (PROTECT); purely additive |
+| `api/serializers.py`, `api/views.py`, `api/urls.py` | REST API (`NetBoxModelViewSet`) — endpoints `/api/plugins/guests/{mounts,devices,profiles,interface-configs,backup-jobs}/`; `backup-jobs` exposes the derived, read-only `vmids` |
 | `filtersets.py` | `NetBoxModelFilterSet`: `virtual_machine_id`/`virtual_machine`, `mp`, `read_only`, search |
 | `tables.py`, `forms.py`, `navigation.py`, `views.py`, `urls.py` | UI layer (generic NetBox views; no custom templates) |
 | `graphql/__init__.py` | placeholder (no bespoke GraphQL type; `NetBoxModel` still exposes auto GraphQL) |
@@ -116,6 +118,12 @@ NetBox holds the structure; OpenBao holds the secret.
 - **`GuestMount`** (FK → VirtualMachine): `mp`, `volume`, `path`, `read_only`; unique per
   `(virtual_machine, mp)`; CASCADE on VM delete. The host-side existence of the backing
   volume/dir is owned by Ansible/host bootstrap, not here.
+- **`BackupJob`** (FK → node `dcim.Device`, PROTECT): `job_id` (unique per node — each PVE host is
+  its own cluster), `storage`, `schedule` (systemd calendar, node-local time), `mode`
+  (snapshot/suspend/stop), `enabled`, `notes_template`, `repeat_missed`, `notification_mode`. **Guest list = `vmids`, derived** from the profiles whose
+  `GuestProfile.backup_job` points here (PROTECT: a job with guests cannot be deleted).
+  `GuestProfile.clean()` requires the profile's `vmid` and that the job's node is the profile's
+  `node`. Realized by the `hv/pve` Tofu module as `/cluster/backup/<job_id>`.
 
 The application/service layer that runs *on* a guest is the sibling `../netbox-services`
 (`ServiceInstance.parent` → this VM, or a raw-OS `dcim.Device`).

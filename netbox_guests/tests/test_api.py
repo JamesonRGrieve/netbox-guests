@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """REST API CRUD tests (real DB + real API client, no mocks). Composes the explicit CRUD mixins
 (no GraphQL type shipped). The (vm, mp) unique constraint means each row needs a distinct mp."""
+from typing import ClassVar
+
 from utilities.testing import APIViewTestCases
 from virtualization.models import VMInterface
 from netbox_guests.models import (
-    GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
 )
 from .test_profile import make_device
 from .utils import make_vm
@@ -99,6 +101,40 @@ class GuestProfileAPITest(*_CRUD):
             {"virtual_machine": make_vm("api-p6").pk, "guest_type": "container",
              "storage": "local-lvm"},
         ]
+
+
+class BackupJobAPITest(*_CRUD):
+    model = BackupJob
+    brief_fields: ClassVar[list[str]] = ["display", "id", "job_id", "node", "url"]
+    bulk_update_data: ClassVar[dict[str, bool]] = {"enabled": False}
+
+    @classmethod
+    def setUpTestData(cls):
+        node = make_device("api-backup-node")
+        for i in range(3):
+            BackupJob.objects.create(
+                node=node, job_id=f"backup-api-{i}", storage="pbs", schedule="21:00",
+            )
+        cls.create_data = [
+            {"node": node.pk, "job_id": "backup-new-1", "storage": "pbs", "schedule": "21:00"},
+            {"node": node.pk, "job_id": "backup-new-2", "storage": "pbs", "schedule": "21:15",
+             "mode": "suspend", "notes_template": "{{guestname}}",
+             "notification_mode": "notification-system"},
+            {"node": node.pk, "job_id": "backup-new-3", "storage": "local", "schedule": "sun 02:00",
+             "enabled": False},
+        ]
+
+    def test_vmids_is_derived_and_read_only(self):
+        self.add_permissions("netbox_guests.view_backupjob", "netbox_guests.change_backupjob")
+        job = BackupJob.objects.first()
+        GuestProfile.objects.create(
+            virtual_machine=make_vm("api-bj-ct"), guest_type="container", vmid=4242,
+            node=job.node, backup_job=job,
+        )
+        url = self._get_detail_url(job)
+        self.assertEqual(self.client.get(url, **self.header).data["vmids"], [4242])
+        self.client.patch(url, {"vmids": [1, 2]}, format="json", **self.header)
+        self.assertEqual(self.client.get(url, **self.header).data["vmids"], [4242])
 
 
 class GuestInterfaceConfigAPITest(*_CRUD):

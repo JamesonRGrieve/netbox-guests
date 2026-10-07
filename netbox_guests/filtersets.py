@@ -5,10 +5,10 @@ from netbox.filtersets import NetBoxModelFilterSet
 from dcim.models import Device
 from virtualization.models import VMInterface, VirtualMachine
 from .choices import (
-    DeviceKindChoices, GuestTypeChoices, PveBiosChoices,
+    BackupModeChoices, DeviceKindChoices, GuestTypeChoices, PveBiosChoices,
 )
 from .models import (
-    GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
 )
 
 # Explicit FK filters: django-filter does NOT derive `<fk>_id` from a bare FK in Meta.fields.
@@ -72,6 +72,9 @@ class GuestProfileFilterSet(NetBoxModelFilterSet):
         field_name="sandbox_of", queryset=VirtualMachine.objects.all(),
         label="Sandbox of (ID)",
     )
+    backup_job_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="backup_job", queryset=BackupJob.objects.all(), label="Backup job (ID)",
+    )
     guest_type = django_filters.MultipleChoiceFilter(choices=GuestTypeChoices)
     bios = django_filters.MultipleChoiceFilter(choices=PveBiosChoices)
 
@@ -88,6 +91,27 @@ class GuestProfileFilterSet(NetBoxModelFilterSet):
         return queryset.filter(
             Q(virtual_machine__name__icontains=value) | Q(storage__icontains=value)
             | Q(ostemplate__icontains=value) | Q(template__icontains=value)
+        )
+
+
+class BackupJobFilterSet(NetBoxModelFilterSet):
+    node_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="node", queryset=Device.objects.all(), label="PVE node (ID)",
+    )
+    node = django_filters.ModelMultipleChoiceFilter(
+        field_name="node__name", to_field_name="name",
+        queryset=Device.objects.all(), label="PVE node (name)",
+    )
+    mode = django_filters.MultipleChoiceFilter(choices=BackupModeChoices)
+
+    class Meta:
+        model = BackupJob
+        fields = ("id", "job_id", "storage", "schedule", "enabled", "repeat_missed")
+
+    def search(self, queryset, name, value):
+        return queryset.filter(
+            Q(job_id__icontains=value) | Q(storage__icontains=value)
+            | Q(description__icontains=value)
         )
 
 

@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Choice sets for the guest models: the passthrough device *kind* (see
-:class:`netbox_guests.models.GuestDevice`), the guest kind, the KVM firmware, and the LXC feature
-flags. The last three replace the ``guest-type`` / ``pve-bios`` / ``lxc-features``
-CustomFieldChoiceSets that :class:`netbox_guests.models.GuestProfile` supersedes -- as real
-enumerations on real model fields, so an invalid value is a validation error rather than a string
-that only fails at converge time."""
+:class:`netbox_guests.models.GuestDevice`), the guest kind, the KVM firmware, the backup job's
+vzdump and notification modes (:class:`netbox_guests.models.BackupJob`), and the LXC feature
+flags. The guest kind, firmware and feature sets replace the ``guest-type`` / ``pve-bios`` /
+``lxc-features`` CustomFieldChoiceSets that :class:`netbox_guests.models.GuestProfile`
+supersedes -- as real enumerations on real model fields, so an invalid value is a validation
+error rather than a string that only fails at converge time."""
 from utilities.choices import ChoiceSet
 
 
@@ -48,6 +49,31 @@ class PveBiosChoices(ChoiceSet):
         (SEABIOS, "SeaBIOS", "gray"),
         (OVMF, "OVMF (UEFI)", "purple"),
     ]
+
+
+class BackupModeChoices(ChoiceSet):
+    """vzdump backup mode (PVE ``mode=``): ``snapshot`` keeps the guest running, ``suspend``
+    freezes it for the copy, ``stop`` shuts it down for a fully consistent image."""
+    SNAPSHOT = "snapshot"
+    SUSPEND = "suspend"
+    STOP = "stop"
+    CHOICES = (
+        (SNAPSHOT, "Snapshot", "green"),
+        (SUSPEND, "Suspend", "orange"),
+        (STOP, "Stop", "red"),
+    )
+
+
+class BackupNotificationModeChoices(ChoiceSet):
+    """How PVE reports a backup job's outcome (``notification-mode=``)."""
+    AUTO = "auto"
+    LEGACY_SENDMAIL = "legacy-sendmail"
+    NOTIFICATION_SYSTEM = "notification-system"
+    CHOICES = (
+        (AUTO, "Auto", "gray"),
+        (LEGACY_SENDMAIL, "Legacy sendmail", "orange"),
+        (NOTIFICATION_SYSTEM, "Notification system", "blue"),
+    )
 
 
 class LxcFeatureChoices(ChoiceSet):

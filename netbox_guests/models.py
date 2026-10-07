@@ -10,6 +10,8 @@ needs that core does not carry:
 * :class:`GuestInterfaceConfig` -- OneToOne per NIC: bridge + explicit gateway, the only two
   per-interface facts with no native home.
 * :class:`GuestMount` / :class:`GuestDevice` -- the repeating structures (``mpN``, ``devN``).
+* :class:`BackupJob` -- a PVE scheduled vzdump job on one node. Its guest list is derived from the
+  profiles that point at it (``GuestProfile.backup_job``), never typed.
 
 Secrets are never stored: only an OpenBao path and ``has_*`` existence flags.
 """
@@ -20,7 +22,8 @@ from django.urls import reverse
 from netbox.models import NetBoxModel
 
 from .choices import (
-    DeviceKindChoices, GuestTypeChoices, LxcFeatureChoices, PveBiosChoices,
+    BackupModeChoices, BackupNotificationModeChoices, DeviceKindChoices, GuestTypeChoices,
+    LxcFeatureChoices, PveBiosChoices,
 )
 
 
@@ -124,6 +127,68 @@ class GuestDevice(NetBoxModel):
         return DeviceKindChoices.colors.get(self.kind)
 
 
+class BackupJob(NetBoxModel):
+    """A PVE scheduled backup job (``/cluster/backup/<job_id>``): when, where and how vzdump backs
+    up a set of guests on one node.
+
+    The guest list is NOT a column. It is derived from the :class:`GuestProfile` rows whose
+    ``backup_job`` points here (:attr:`vmids`), so adding a guest to backups is a property of the
+    guest, and a list typed by hand can never drift from the guests that exist. ``node`` scopes the
+    job: each PVE host is its own cluster, so a job only ever backs up that node's guests."""
+
+    node = models.ForeignKey(
+        "dcim.Device", on_delete=models.PROTECT, related_name="backup_jobs",
+        help_text="PVE node (its own cluster) the job runs on.",
+    )
+    job_id = models.CharField(
+        max_length=64,
+        help_text="PVE job id (the /cluster/backup/<id> key), e.g. backup-2db1d3a9-96c6.",
+    )
+    storage = models.CharField(max_length=255, help_text="PVE storage the backups are written to.")
+    schedule = models.CharField(
+        max_length=128, help_text="systemd calendar event in the node's local time (e.g. 21:00).",
+    )
+    mode = models.CharField(
+        max_length=16, choices=BackupModeChoices, default=BackupModeChoices.SNAPSHOT,
+        help_text="vzdump mode.",
+    )
+    enabled = models.BooleanField(default=True, help_text="Whether the schedule runs.")
+    notes_template = models.CharField(
+        max_length=1024, blank=True,
+        help_text="Template for each backup's notes (e.g. {{guestname}}). Never include a secret.",
+    )
+    repeat_missed = models.BooleanField(
+        default=False, help_text="Run a missed schedule as soon as the node is back.",
+    )
+    notification_mode = models.CharField(
+        max_length=32, choices=BackupNotificationModeChoices,
+        default=BackupNotificationModeChoices.AUTO, help_text="How PVE reports the outcome.",
+    )
+    description = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ("node", "job_id")
+        verbose_name = "Backup Job"
+        constraints = (
+            models.UniqueConstraint(
+                fields=("node", "job_id"), name="netbox_guests_backupjob_unique_node_job_id",
+            ),
+        )
+
+    def __str__(self):
+        return f"{self.node}: {self.job_id}"
+
+    def get_absolute_url(self):
+        return reverse("plugins:netbox_guests:backupjob", args=[self.pk])
+
+    @property
+    def vmids(self):
+        """The VMIDs this job backs up, ascending: every profile pointing here that has a VMID."""
+        return sorted(
+            self.guests.filter(vmid__isnull=False).values_list("vmid", flat=True)
+        )
+
+
 class GuestProfile(NetBoxModel):
     """The PVE provisioning intent for one guest, as real typed columns.
 
@@ -180,6 +245,12 @@ class GuestProfile(NetBoxModel):
         "virtualization.VirtualMachine", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="sandbox_guests",
         help_text="The production guest this one is a sandbox copy of. Set only on sandbox guests.",
+    )
+    backup_job = models.ForeignKey(
+        "netbox_guests.BackupJob", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="guests",
+        help_text="The scheduled backup job on this guest's node that backs it up. PROTECT: a job "
+                  "is only deleted once no guest relies on it.",
     )
     description_template = models.TextField(
         blank=True,
@@ -291,6 +362,15 @@ class GuestProfile(NetBoxModel):
                 )
         if self.sandbox_of_id and self.sandbox_of_id == self.virtual_machine_id:
             raise ValidationError({"sandbox_of": "A guest cannot be a sandbox of itself."})
+        if self.backup_job_id:
+            if self.vmid is None:
+                raise ValidationError(
+                    {"backup_job": "Set vmid: a backup job selects guests by VMID."}
+                )
+            if self.backup_job.node_id != self.node_id:
+                raise ValidationError(
+                    {"backup_job": "The backup job must run on this guest's node."}
+                )
 
 
 class GuestInterfaceConfig(NetBoxModel):

@@ -3,11 +3,11 @@
 from django.test import TestCase
 from virtualization.models import VMInterface
 from netbox_guests.filtersets import (
-    GuestDeviceFilterSet, GuestInterfaceConfigFilterSet, GuestMountFilterSet,
-    GuestProfileFilterSet,
+    BackupJobFilterSet, GuestDeviceFilterSet, GuestInterfaceConfigFilterSet,
+    GuestMountFilterSet, GuestProfileFilterSet,
 )
 from netbox_guests.models import (
-    GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
 )
 from .utils import make_vm
 
@@ -93,9 +93,12 @@ class GuestProfileFilterSetTest(TestCase):
     def setUpTestData(cls):
         from .test_profile import make_device
         cls.node = make_device("filter-node")
+        cls.job = BackupJob.objects.create(
+            node=cls.node, job_id="backup-f", storage="pbs", schedule="21:00",
+        )
         cls.ct = GuestProfile.objects.create(
             virtual_machine=make_vm("f-ct"), guest_type="container", vmid=7001,
-            node=cls.node, storage="local-zfs", onboot=True, protection=True,
+            node=cls.node, storage="local-zfs", onboot=True, protection=True, backup_job=cls.job,
         )
         cls.kvm = GuestProfile.objects.create(
             virtual_machine=make_vm("f-kvm"), guest_type="vm", vmid=7002,
@@ -129,6 +132,46 @@ class GuestProfileFilterSetTest(TestCase):
     def test_search_matches_guest_name_and_storage(self):
         self.assertIn(self.ct, self._f({"q": "local-zfs"}))
         self.assertIn(self.kvm, self._f({"q": "f-kvm"}))
+
+    def test_by_backup_job_id(self):
+        self.assertEqual(list(self._f({"backup_job_id": [self.job.pk]})), [self.ct])
+
+
+class BackupJobFilterSetTest(TestCase):
+    """Filters the hv/pve module uses to read one node's jobs, plus mode/enabled/search."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from .test_profile import make_device
+        cls.core = make_device("bj-core")
+        cls.backup = make_device("bj-backup")
+        cls.a = BackupJob.objects.create(
+            node=cls.core, job_id="backup-aaa", storage="pbs", schedule="21:00", mode="suspend",
+        )
+        cls.b = BackupJob.objects.create(
+            node=cls.backup, job_id="backup-bbb", storage="local", schedule="21:15",
+            enabled=False, description="weekly",
+        )
+
+    def _f(self, params):
+        return BackupJobFilterSet(params, queryset=BackupJob.objects.all()).qs
+
+    def test_by_node_id_and_name(self):
+        self.assertEqual(list(self._f({"node_id": [self.core.pk]})), [self.a])
+        self.assertEqual(list(self._f({"node": ["bj-backup"]})), [self.b])
+
+    def test_by_job_id(self):
+        self.assertEqual(list(self._f({"job_id": ["backup-bbb"]})), [self.b])
+
+    def test_by_mode(self):
+        self.assertEqual(list(self._f({"mode": ["suspend"]})), [self.a])
+
+    def test_by_enabled(self):
+        self.assertEqual(list(self._f({"enabled": False})), [self.b])
+
+    def test_search(self):
+        self.assertEqual(list(self._f({"q": "aaa"})), [self.a])
+        self.assertEqual(list(self._f({"q": "weekly"})), [self.b])
 
 
 class GuestInterfaceConfigFilterSetTest(TestCase):

@@ -78,6 +78,31 @@ class GuestProfileBulkDeleteView(generic.BulkDeleteView):
     table = tables.GuestProfileTable
 
 
+class BackupJobView(generic.ObjectView):
+    queryset = models.BackupJob.objects.all()
+
+
+class BackupJobListView(generic.ObjectListView):
+    queryset = models.BackupJob.objects.all()
+    table = tables.BackupJobTable
+    filterset = filtersets.BackupJobFilterSet
+    filterset_form = forms.BackupJobFilterForm
+
+
+class BackupJobEditView(generic.ObjectEditView):
+    queryset = models.BackupJob.objects.all()
+    form = forms.BackupJobForm
+
+
+class BackupJobDeleteView(generic.ObjectDeleteView):
+    queryset = models.BackupJob.objects.all()
+
+
+class BackupJobBulkDeleteView(generic.BulkDeleteView):
+    queryset = models.BackupJob.objects.all()
+    table = tables.BackupJobTable
+
+
 class GuestInterfaceConfigView(generic.ObjectView):
     queryset = models.GuestInterfaceConfig.objects.all()
 
