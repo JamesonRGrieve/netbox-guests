@@ -58,9 +58,11 @@ credential (value lives in OpenBao; the password is never stored, and the module
 writing it into the PVE description).
 
 ### `GuestMount` related model (thin, FK → VM)
-`mp` index, `volume`, `path` — the only genuinely-repeating structure that does not fit
-a scalar CF. Build only if guests actually use mounts; otherwise flat `mp0..N` CFs
-suffice.
+`mp` index, `volume`, `path`, `read_only`, `backup`, `size_gib` — the only genuinely-repeating
+structure that does not fit a scalar CF. `volume` is either a host bind path (`/host/dir`,
+never in vzdump backups) or a PVE storage volume (`storage:subvol-<vmid>-disk-N`). For a
+storage volume `size_gib` is set: the pipeline allocates it once at that size and then
+references it by volid, so it can carry `backup=1` and land in PBS backups.
 
 ### Excluded — belongs to `netbox-services`
 `app_playbook`, `app_vars`, `port`, application credentials. The guest layer is

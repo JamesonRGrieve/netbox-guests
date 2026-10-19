@@ -19,12 +19,12 @@ class GuestMountForm(NetBoxModelForm):
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
 
     fieldsets = (
-        FieldSet("virtual_machine", "mp", "volume", "path", "read_only", "backup", name="Mount"),
+        FieldSet("virtual_machine", "mp", "volume", "path", "read_only", "backup", "size_gib", name="Mount"),
     )
 
     class Meta:
         model = GuestMount
-        fields = ["virtual_machine", "mp", "volume", "path", "read_only", "backup", "tags"]
+        fields = ["virtual_machine", "mp", "volume", "path", "read_only", "backup", "size_gib", "tags"]
 
 
 class GuestMountFilterForm(NetBoxModelFilterSetForm):

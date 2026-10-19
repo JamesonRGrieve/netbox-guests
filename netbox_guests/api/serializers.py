@@ -25,7 +25,7 @@ class GuestMountSerializer(NetBoxModelSerializer):
         model = GuestMount
         fields = [
             "id", "url", "display", "virtual_machine", "mp", "volume", "path", "read_only",
-            "backup", "tags", "custom_fields", "created", "last_updated",
+            "backup", "size_gib", "tags", "custom_fields", "created", "last_updated",
         ]
         brief_fields = ["id", "url", "display", "virtual_machine", "mp", "path"]
 

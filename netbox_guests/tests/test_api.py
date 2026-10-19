@@ -49,6 +49,10 @@ class GuestMountAPITest(*_CRUD):
                 "read_only": True,
             },
             {"virtual_machine": vm.pk, "mp": 12, "volume": "local:12", "path": "/z"},
+            {
+                "virtual_machine": vm.pk, "mp": 13, "volume": "db-mariadb:subvol-122-disk-1",
+                "path": "/var/lib/mysql", "backup": True, "size_gib": 16,
+            },
         ]
 
 

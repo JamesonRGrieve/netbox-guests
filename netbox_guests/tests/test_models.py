@@ -21,6 +21,16 @@ class GuestMountModelTest(TestCase):
         self.assertIn("/plugins/guests/mounts/", m.get_absolute_url())
         self.assertFalse(m.read_only)
 
+    def test_size_gib_optional(self):
+        bind = GuestMount.objects.create(virtual_machine=self.vm, mp=0, volume="/host/dir", path="/a")
+        self.assertIsNone(bind.size_gib)
+        vol = GuestMount.objects.create(
+            virtual_machine=self.vm, mp=1, volume="db-mariadb:subvol-122-disk-1", path="/var/lib/mysql",
+            backup=True, size_gib=16,
+        )
+        vol.refresh_from_db()
+        self.assertEqual(vol.size_gib, 16)
+
     def test_unique_vm_mp(self):
         GuestMount.objects.create(virtual_machine=self.vm, mp=0, volume="a", path="/a")
         with self.assertRaises(IntegrityError), transaction.atomic():

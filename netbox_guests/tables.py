@@ -16,7 +16,7 @@ class GuestMountTable(NetBoxTable):
     class Meta(NetBoxTable.Meta):
         model = GuestMount
         fields = (
-            "pk", "id", "virtual_machine", "mp", "volume", "path", "read_only", "backup", "tags",
+            "pk", "id", "virtual_machine", "mp", "volume", "path", "read_only", "backup", "size_gib", "tags",
             "created", "last_updated",
         )
         default_columns = ("virtual_machine", "mp", "volume", "path", "read_only", "backup")
