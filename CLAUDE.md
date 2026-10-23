@@ -150,4 +150,4 @@ The application/service layer that runs *on* a guest is the sibling `../netbox-s
 ---
 
 ## Licensing
-- **AGPL-3.0-or-later** (workspace production-IaC standard). SPDX header in every file.
+- **AGPL-3.0-or-later**, SPDX header in every file (SOP → *Code Quality and Testing*).
