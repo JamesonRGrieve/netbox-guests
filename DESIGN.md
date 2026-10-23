@@ -87,7 +87,7 @@ single-node (`var.proxmox_node`), single-VLAN (`pool = "vlan-${var.vlan}"`,
 (`containers.tf:117`, `vm.tf:90`). The refactor:
 
 - **vmid-keyed `for_each`** + a one-time `moved {}` pass (stable-key rule,
-  `ai-prompts/tofu.md:145-160`) — a rename must not become destroy+recreate.
+  SOP *Stack Standards → OpenTofu* “Idempotency and ownership”) — a rename must not become destroy+recreate.
 - **real hostname** (drop the `tofu-` prefix) — the #1 0-diff-adoption blocker.
 - **per-guest** node / storage / pool, **per-iface** bridge.
 - **multi-NIC** — the module emits only `net0` (`containers.tf:132`, `vm.tf:110`);
@@ -172,7 +172,7 @@ allocation. **Sequence §7 last.** The `high_availability_of` model, per-type
   config_context; the §3 reader merge pattern), `netbox-tofu-bao.md` (wiring).
 - `tofu/opentofu/hv/pve/{containers,vm,locals,networking,pools,netbox_services}.tf`
   (the hardcoded addressing + single-everything module this fixes).
-- `ai-prompts/tofu.md` (provider/module standards: stable-key `for_each`, ephemeral
+- SOP *Stack Standards → OpenTofu* (provider/module standards: stable-key `for_each`, ephemeral
   secrets, import-first / 0-diff).
 - Structural reference: `netbox-system-services` (plugin layout to mirror).
 - Sibling: [`netbox-services`](../netbox-services/DESIGN.md) (application layer).
