@@ -76,6 +76,15 @@ class BackupNotificationModeChoices(ChoiceSet):
     )
 
 
+class PveStorageTypeChoices(ChoiceSet):
+    """PVE storage backends a :class:`netbox_guests.models.PveStorage` row can declare (the
+    ``type`` of ``/storage``). Only what the pipeline realizes is listed."""
+    PBS = "pbs"
+    CHOICES = (
+        (PBS, "Proxmox Backup Server", "blue"),
+    )
+
+
 class LxcFeatureChoices(ChoiceSet):
     """LXC feature flags (the PVE ``features=`` key). ``nesting`` is what lets a container run
     containers (podman/docker) and is the one most guests need; the rest widen the container's

@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """GuestMount filterset tests against a real DB: FK-by-id, FK-by-name, boolean, exact, search."""
 from django.test import TestCase
+from ipam.models import IPAddress
 from virtualization.models import VMInterface
 from netbox_guests.filtersets import (
     BackupJobFilterSet, GuestDeviceFilterSet, GuestInterfaceConfigFilterSet,
-    GuestMountFilterSet, GuestProfileFilterSet,
+    GuestMountFilterSet, GuestProfileFilterSet, PveStorageFilterSet,
 )
 from netbox_guests.models import (
-    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile, PveStorage,
 )
 from .utils import make_vm
 
@@ -172,6 +173,44 @@ class BackupJobFilterSetTest(TestCase):
     def test_search(self):
         self.assertEqual(list(self._f({"q": "aaa"})), [self.a])
         self.assertEqual(list(self._f({"q": "weekly"})), [self.b])
+
+
+class PveStorageFilterSetTest(TestCase):
+    """Filters the hv/pve module uses to read one node's storages, plus server/enabled/search."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from .test_profile import make_device
+        cls.sandbox = make_device("st-sandbox")
+        cls.core = make_device("st-core")
+        cls.ip1 = IPAddress.objects.create(address="172.23.0.250/24")
+        cls.ip2 = IPAddress.objects.create(address="192.0.2.2/24")
+        cls.a = PveStorage.objects.create(
+            node=cls.sandbox, storage_id="pbs", server=cls.ip1, datastore="pbs",
+            username="pve@pbs", bao_secret_path="p",
+        )
+        cls.b = PveStorage.objects.create(
+            node=cls.core, storage_id="pbs-core", server=cls.ip2, datastore="tank",
+            username="pve@pbs", bao_secret_path="p", enabled=False, description="offsite",
+        )
+
+    def _f(self, params):
+        return PveStorageFilterSet(params, queryset=PveStorage.objects.all()).qs
+
+    def test_by_node_id_and_name(self):
+        self.assertEqual(list(self._f({"node_id": [self.sandbox.pk]})), [self.a])
+        self.assertEqual(list(self._f({"node": ["st-core"]})), [self.b])
+
+    def test_by_server_id(self):
+        self.assertEqual(list(self._f({"server_id": [self.ip2.pk]})), [self.b])
+
+    def test_by_type_and_enabled(self):
+        self.assertEqual(len(self._f({"type": ["pbs"]})), 2)
+        self.assertEqual(list(self._f({"enabled": False})), [self.b])
+
+    def test_search(self):
+        self.assertEqual(list(self._f({"q": "tank"})), [self.b])
+        self.assertEqual(list(self._f({"q": "offsite"})), [self.b])
 
 
 class GuestInterfaceConfigFilterSetTest(TestCase):

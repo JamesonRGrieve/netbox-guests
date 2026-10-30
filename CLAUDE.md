@@ -20,6 +20,7 @@ interface. Everything else PVE needs is a **model owned by this plugin**:
 | `GuestMount` | FK → VirtualMachine | repeating `mpN` |
 | `GuestDevice` | FK → VirtualMachine | repeating `devN` / raw-LXC passthrough |
 | `BackupJob` | FK → node (`dcim.Device`) | a PVE scheduled vzdump job (`/cluster/backup/<id>`); its guest list is derived from `GuestProfile.backup_job`, never typed |
+| `PveStorage` | FK → node (`dcim.Device`) | a PVE storage definition (`/storage/<id>`), today a PBS datastore: server (`ipam.IPAddress`), port, datastore, username, password's OpenBao path, public cert fingerprint |
 
 The 2026-06-17 decision put the PVE scalars in typed **custom fields**. They were typed, but they
 were still `extras.CustomField` rows — values in a JSON column, so `node` had no referential
@@ -89,14 +90,15 @@ NetBox holds the structure; OpenBao holds the secret.
 |------|----------------|
 | `__init__.py` | `PluginConfig` — name `netbox_guests`, `base_url='guests'`, min/max NetBox version (tracks the sibling fleet; bump in lockstep when prod upgrades) |
 | `customfields.py` | SUPERSEDED — the legacy CF SPECS + `install`/`uninstall`, retained until a later migration removes the fields |
-| `models.py` | `GuestProfile`, `GuestInterfaceConfig`, `GuestMount`, `GuestDevice`, `BackupJob` |
-| `choices.py` | `DeviceKindChoices`, `GuestTypeChoices`, `PveBiosChoices`, `LxcFeatureChoices` (real enumerations replacing the CustomFieldChoiceSets), `BackupModeChoices`, `BackupNotificationModeChoices` |
+| `models.py` | `GuestProfile`, `GuestInterfaceConfig`, `GuestMount`, `GuestDevice`, `BackupJob`, `PveStorage` |
+| `choices.py` | `DeviceKindChoices`, `GuestTypeChoices`, `PveBiosChoices`, `LxcFeatureChoices` (real enumerations replacing the CustomFieldChoiceSets), `BackupModeChoices`, `BackupNotificationModeChoices`, `PveStorageTypeChoices` (`pbs`) |
 | `migrations/0001_initial.py` | `GuestMount` table (hand-authored; verify with `makemigrations --check --dry-run`) |
 | `migrations/0002_custom_fields.py` | legacy: `RunPython(install, uninstall)` — installs the CFs |
 | `migrations/0005_…` | `GuestProfile` + `GuestInterfaceConfig` tables, unique-VMID constraint |
 | `migrations/0006_custom_fields_to_profile.py` | `RunPython(forward, backward)` — copies each guest's CF values into its profile. Idempotent (skips a guest that already has one) and reversible (writes the values back into `custom_field_data`). Reads `custom_field_data` directly, so it does not depend on the CF definitions still existing |
 | `migrations/0008_backupjob.py` | `BackupJob` table + unique `(node, job_id)` + nullable `GuestProfile.backup_job` (PROTECT); purely additive |
-| `api/serializers.py`, `api/views.py`, `api/urls.py` | REST API (`NetBoxModelViewSet`) — endpoints `/api/plugins/guests/{mounts,devices,profiles,interface-configs,backup-jobs}/`; `backup-jobs` exposes the derived, read-only `vmids` |
+| `migrations/0010_pvestorage.py` | `PveStorage` table + unique `(node, storage_id)`; purely additive |
+| `api/serializers.py`, `api/views.py`, `api/urls.py` | REST API (`NetBoxModelViewSet`) — endpoints `/api/plugins/guests/{mounts,devices,profiles,interface-configs,backup-jobs,storages}/`; `backup-jobs` exposes the derived, read-only `vmids` |
 | `filtersets.py` | `NetBoxModelFilterSet`: `virtual_machine_id`/`virtual_machine`, `mp`, `read_only`, search |
 | `tables.py`, `forms.py`, `navigation.py`, `views.py`, `urls.py` | UI layer (generic NetBox views; no custom templates) |
 | `graphql/__init__.py` | placeholder (no bespoke GraphQL type; `NetBoxModel` still exposes auto GraphQL) |
@@ -124,6 +126,12 @@ NetBox holds the structure; OpenBao holds the secret.
   `GuestProfile.backup_job` points here (PROTECT: a job with guests cannot be deleted).
   `GuestProfile.clean()` requires the profile's `vmid` and that the job's node is the profile's
   `node`. Realized by the `hv/pve` Tofu module as `/cluster/backup/<job_id>`.
+- **`PveStorage`** (FK → node `dcim.Device`, PROTECT): `storage_id` (unique per node), `type`
+  (`pbs`), `server` (FK → `ipam.IPAddress`, PROTECT), `port` (8007), `datastore`, `username`,
+  `bao_secret_path` (the PBS user's password, key `password`; never the value), `fingerprint`
+  (public SHA-256 cert fingerprint, `RegexValidator` 32 hex octets; blank until the server
+  exists), `content` (`backup`), `enabled`. Realized by `hv/pve` as `/storage/<storage_id>`;
+  `BackupJob.storage` names it.
 
 The application/service layer that runs *on* a guest is the sibling `../netbox-services`
 (`ServiceInstance.parent` → this VM, or a raw-OS `dcim.Device`).

@@ -2,7 +2,7 @@
 import django_tables2 as tables
 from netbox.tables import NetBoxTable, columns
 from .models import (
-    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile, PveStorage,
 )
 
 
@@ -87,6 +87,24 @@ class BackupJobTable(NetBoxTable):
 
     def render_vmids(self, value):
         return ", ".join(str(v) for v in value) or "—"
+
+
+class PveStorageTable(NetBoxTable):
+    node = tables.Column(linkify=True)
+    storage_id = tables.Column(linkify=True)
+    type = columns.ChoiceFieldColumn()
+    server = tables.Column(linkify=True)
+    enabled = columns.BooleanColumn()
+    tags = columns.TagColumn(url_name="plugins:netbox_guests:pvestorage_list")
+
+    class Meta(NetBoxTable.Meta):
+        model = PveStorage
+        fields = (
+            "pk", "id", "node", "storage_id", "type", "server", "port", "datastore", "username",
+            "bao_secret_path", "fingerprint", "content", "enabled", "description", "tags",
+            "created", "last_updated",
+        )
+        default_columns = ("node", "storage_id", "type", "server", "datastore", "enabled")
 
 
 class GuestInterfaceConfigTable(NetBoxTable):

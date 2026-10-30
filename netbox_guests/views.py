@@ -103,6 +103,31 @@ class BackupJobBulkDeleteView(generic.BulkDeleteView):
     table = tables.BackupJobTable
 
 
+class PveStorageView(generic.ObjectView):
+    queryset = models.PveStorage.objects.all()
+
+
+class PveStorageListView(generic.ObjectListView):
+    queryset = models.PveStorage.objects.all()
+    table = tables.PveStorageTable
+    filterset = filtersets.PveStorageFilterSet
+    filterset_form = forms.PveStorageFilterForm
+
+
+class PveStorageEditView(generic.ObjectEditView):
+    queryset = models.PveStorage.objects.all()
+    form = forms.PveStorageForm
+
+
+class PveStorageDeleteView(generic.ObjectDeleteView):
+    queryset = models.PveStorage.objects.all()
+
+
+class PveStorageBulkDeleteView(generic.BulkDeleteView):
+    queryset = models.PveStorage.objects.all()
+    table = tables.PveStorageTable
+
+
 class GuestInterfaceConfigView(generic.ObjectView):
     queryset = models.GuestInterfaceConfig.objects.all()
 

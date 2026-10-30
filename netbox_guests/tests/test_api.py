@@ -3,10 +3,11 @@
 (no GraphQL type shipped). The (vm, mp) unique constraint means each row needs a distinct mp."""
 from typing import ClassVar
 
+from ipam.models import IPAddress
 from utilities.testing import APIViewTestCases
 from virtualization.models import VMInterface
 from netbox_guests.models import (
-    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile, PveStorage,
 )
 from .test_profile import make_device
 from .utils import make_vm
@@ -139,6 +140,40 @@ class BackupJobAPITest(*_CRUD):
         self.assertEqual(self.client.get(url, **self.header).data["vmids"], [4242])
         self.client.patch(url, {"vmids": [1, 2]}, format="json", **self.header)
         self.assertEqual(self.client.get(url, **self.header).data["vmids"], [4242])
+
+
+class PveStorageAPITest(*_CRUD):
+    model = PveStorage
+    brief_fields: ClassVar[list[str]] = ["display", "id", "node", "storage_id", "url"]
+    bulk_update_data: ClassVar[dict[str, bool]] = {"enabled": False}
+
+    @classmethod
+    def setUpTestData(cls):
+        node = make_device("api-storage-node")
+        ip = IPAddress.objects.create(address="172.23.0.250/24")
+        for i in range(3):
+            PveStorage.objects.create(
+                node=node, storage_id=f"pbs-api-{i}", server=ip, datastore="pbs",
+                username="pve@pbs", bao_secret_path="prod/boden/infra/hq/pbs/pve",
+            )
+        fp = ":".join(["0f"] * 32)
+        cls.create_data = [
+            {"node": node.pk, "storage_id": "pbs-new-1", "server": ip.pk, "datastore": "pbs",
+             "username": "pve@pbs", "bao_secret_path": "prod/boden/infra/hq/pbs/pve"},
+            {"node": node.pk, "storage_id": "pbs-new-2", "server": ip.pk, "datastore": "pbs",
+             "username": "pve@pbs", "bao_secret_path": "prod/boden/infra/hq/pbs/pve",
+             "fingerprint": fp, "port": 8008},
+            {"node": node.pk, "storage_id": "pbs-new-3", "server": ip.pk, "datastore": "tank",
+             "username": "pve@pbs", "bao_secret_path": "prod/boden/infra/hq/pbs/pve",
+             "enabled": False, "content": "backup"},
+        ]
+
+    def test_bad_fingerprint_is_rejected(self):
+        self.add_permissions("netbox_guests.add_pvestorage")
+        data = dict(self.create_data[0], storage_id="pbs-bad", fingerprint="ab:cd")
+        r = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("fingerprint", r.data)
 
 
 class GuestInterfaceConfigAPITest(*_CRUD):

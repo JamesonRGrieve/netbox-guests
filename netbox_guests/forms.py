@@ -6,12 +6,13 @@ from utilities.forms.fields import (
 )
 from utilities.forms.rendering import FieldSet
 from dcim.models import Device
+from ipam.models import IPAddress
 from virtualization.models import VMInterface, VirtualMachine
 from .choices import (
-    BackupModeChoices, DeviceKindChoices, GuestTypeChoices, PveBiosChoices,
+    BackupModeChoices, DeviceKindChoices, GuestTypeChoices, PveBiosChoices, PveStorageTypeChoices,
 )
 from .models import (
-    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile, PveStorage,
 )
 
 
@@ -135,6 +136,34 @@ class BackupJobFilterForm(NetBoxModelFilterSetForm):
     mode = forms.MultipleChoiceField(choices=BackupModeChoices, required=False)
     enabled = forms.NullBooleanField(required=False)
     tag = TagFilterField(BackupJob)
+
+
+class PveStorageForm(NetBoxModelForm):
+    node = DynamicModelChoiceField(queryset=Device.objects.all())
+    server = DynamicModelChoiceField(queryset=IPAddress.objects.all())
+
+    fieldsets = (
+        FieldSet("node", "storage_id", "type", "content", "enabled", "description", name="Storage"),
+        FieldSet("server", "port", "datastore", "username", "bao_secret_path", "fingerprint",
+                 name="Server"),
+    )
+
+    class Meta:
+        model = PveStorage
+        fields = (
+            "node", "storage_id", "type", "server", "port", "datastore", "username",
+            "bao_secret_path", "fingerprint", "content", "enabled", "description", "tags",
+        )
+
+
+class PveStorageFilterForm(NetBoxModelFilterSetForm):
+    model = PveStorage
+    node_id = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(), required=False, label="PVE node"
+    )
+    type = forms.MultipleChoiceField(choices=PveStorageTypeChoices, required=False)
+    enabled = forms.NullBooleanField(required=False)
+    tag = TagFilterField(PveStorage)
 
 
 class GuestInterfaceConfigForm(NetBoxModelForm):

@@ -3,12 +3,13 @@ import django_filters
 from django.db.models import Q
 from netbox.filtersets import NetBoxModelFilterSet
 from dcim.models import Device
+from ipam.models import IPAddress
 from virtualization.models import VMInterface, VirtualMachine
 from .choices import (
-    BackupModeChoices, DeviceKindChoices, GuestTypeChoices, PveBiosChoices,
+    BackupModeChoices, DeviceKindChoices, GuestTypeChoices, PveBiosChoices, PveStorageTypeChoices,
 )
 from .models import (
-    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile, PveStorage,
 )
 
 # Explicit FK filters: django-filter does NOT derive `<fk>_id` from a bare FK in Meta.fields.
@@ -111,6 +112,30 @@ class BackupJobFilterSet(NetBoxModelFilterSet):
     def search(self, queryset, name, value):
         return queryset.filter(
             Q(job_id__icontains=value) | Q(storage__icontains=value)
+            | Q(description__icontains=value)
+        )
+
+
+class PveStorageFilterSet(NetBoxModelFilterSet):
+    node_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="node", queryset=Device.objects.all(), label="PVE node (ID)",
+    )
+    node = django_filters.ModelMultipleChoiceFilter(
+        field_name="node__name", to_field_name="name",
+        queryset=Device.objects.all(), label="PVE node (name)",
+    )
+    server_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="server", queryset=IPAddress.objects.all(), label="Server (ID)",
+    )
+    type = django_filters.MultipleChoiceFilter(choices=PveStorageTypeChoices)
+
+    class Meta:
+        model = PveStorage
+        fields = ("id", "storage_id", "datastore", "username", "enabled")
+
+    def search(self, queryset, name, value):
+        return queryset.filter(
+            Q(storage_id__icontains=value) | Q(datastore__icontains=value)
             | Q(description__icontains=value)
         )
 

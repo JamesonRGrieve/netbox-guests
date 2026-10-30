@@ -10,5 +10,6 @@ router.register("devices", views.GuestDeviceViewSet)
 router.register("profiles", views.GuestProfileViewSet)
 router.register("interface-configs", views.GuestInterfaceConfigViewSet)
 router.register("backup-jobs", views.BackupJobViewSet)
+router.register("storages", views.PveStorageViewSet)
 
 urlpatterns = router.urls

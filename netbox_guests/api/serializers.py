@@ -2,11 +2,12 @@
 from netbox.api.serializers import NetBoxModelSerializer
 from rest_framework import serializers
 from dcim.api.serializers import DeviceSerializer
+from ipam.api.serializers import IPAddressSerializer
 from virtualization.api.serializers import (
     VMInterfaceSerializer, VirtualMachineSerializer,
 )
 from ..models import (
-    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile,
+    BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile, PveStorage,
 )
 
 
@@ -60,6 +61,21 @@ class BackupJobSerializer(NetBoxModelSerializer):
             "description", "tags", "custom_fields", "created", "last_updated",
         )
         brief_fields = ("id", "url", "display", "node", "job_id")
+
+
+class PveStorageSerializer(NetBoxModelSerializer):
+    url = _detail_url("pvestorage")
+    node = DeviceSerializer(nested=True)
+    server = IPAddressSerializer(nested=True)
+
+    class Meta:
+        model = PveStorage
+        fields = (
+            "id", "url", "display", "node", "storage_id", "type", "server", "port", "datastore",
+            "username", "bao_secret_path", "fingerprint", "content", "enabled",
+            "description", "tags", "custom_fields", "created", "last_updated",
+        )
+        brief_fields = ("id", "url", "display", "node", "storage_id")
 
 
 class GuestProfileSerializer(NetBoxModelSerializer):

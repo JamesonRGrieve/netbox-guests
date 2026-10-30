@@ -12,19 +12,25 @@ needs that core does not carry:
 * :class:`GuestMount` / :class:`GuestDevice` -- the repeating structures (``mpN``, ``devN``).
 * :class:`BackupJob` -- a PVE scheduled vzdump job on one node. Its guest list is derived from the
   profiles that point at it (``GuestProfile.backup_job``), never typed.
+* :class:`PveStorage` -- a storage definition on one node (``/storage/<storage_id>``), today a
+  Proxmox Backup Server datastore that backup jobs write to.
 
 Secrets are never stored: only an OpenBao path and ``has_*`` existence flags.
 """
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.urls import reverse
 from netbox.models import NetBoxModel
 
 from .choices import (
     BackupModeChoices, BackupNotificationModeChoices, DeviceKindChoices, GuestTypeChoices,
-    LxcFeatureChoices, PveBiosChoices,
+    LxcFeatureChoices, PveBiosChoices, PveStorageTypeChoices,
 )
+
+# A PBS certificate fingerprint as PVE takes it: SHA-256, 32 colon-separated hex octets.
+PBS_FINGERPRINT_RE = r"^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){31}$"
 
 
 class GuestMount(NetBoxModel):
@@ -195,6 +201,64 @@ class BackupJob(NetBoxModel):
         return sorted(
             self.guests.filter(vmid__isnull=False).values_list("vmid", flat=True)
         )
+
+
+class PveStorage(NetBoxModel):
+    """A PVE storage definition on one node (``/storage/<storage_id>``): today a Proxmox Backup
+    Server datastore the node's backup jobs write to (``BackupJob.storage`` names it).
+
+    ``server`` is the PBS address as a real IPAM row. The PBS user's password is a secret, so only
+    its OpenBao path is stored (``bao_secret_path``, key ``password``). ``fingerprint`` is the PBS
+    certificate's public SHA-256 fingerprint, recorded after the server is built and updated if
+    its certificate is ever regenerated."""
+
+    node = models.ForeignKey(
+        "dcim.Device", on_delete=models.PROTECT, related_name="pve_storages",
+        help_text="PVE node (its own cluster) the storage is defined on.",
+    )
+    storage_id = models.CharField(
+        max_length=64, help_text="PVE storage id (the /storage/<id> key), e.g. pbs.",
+    )
+    type = models.CharField(
+        max_length=16, choices=PveStorageTypeChoices, default=PveStorageTypeChoices.PBS,
+        help_text="PVE storage backend.",
+    )
+    server = models.ForeignKey(
+        "ipam.IPAddress", on_delete=models.PROTECT, related_name="pve_storages",
+        help_text="Address of the storage server.",
+    )
+    port = models.PositiveIntegerField(default=8007, help_text="Storage server API port.")
+    datastore = models.CharField(max_length=64, help_text="PBS datastore name.")
+    username = models.CharField(max_length=128, help_text="PBS user PVE logs in as, e.g. pve@pbs.")
+    bao_secret_path = models.CharField(
+        max_length=255,
+        help_text="OpenBao KV path holding the user's password (key `password`). Never the value.",
+    )
+    fingerprint = models.CharField(
+        max_length=95, blank=True,
+        validators=[RegexValidator(
+            PBS_FINGERPRINT_RE, "A SHA-256 fingerprint is 32 colon-separated hex octets.",
+        )],
+        help_text="PBS certificate SHA-256 fingerprint (aa:bb:…, 32 octets). Blank until the server exists.",
+    )
+    content = models.CharField(max_length=64, default="backup", help_text="PVE content types.")
+    enabled = models.BooleanField(default=True, help_text="Whether PVE uses the storage.")
+    description = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ("node", "storage_id")
+        verbose_name = "PVE Storage"
+        constraints = (
+            models.UniqueConstraint(
+                fields=("node", "storage_id"), name="netbox_guests_pvestorage_unique_node_storage_id",
+            ),
+        )
+
+    def __str__(self):
+        return f"{self.node}: {self.storage_id}"
+
+    def get_absolute_url(self):
+        return reverse("plugins:netbox_guests:pvestorage", args=[self.pk])
 
 
 class GuestProfile(NetBoxModel):
