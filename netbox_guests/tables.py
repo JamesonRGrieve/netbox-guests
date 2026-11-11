@@ -59,7 +59,7 @@ class GuestProfileTable(NetBoxTable):
             "onboot", "start", "protection", "sandbox_of", "backup_job", "swap", "unprivileged",
             "features",
             "ostemplate", "template", "image", "iso", "bios", "cpu_type", "sockets", "numa",
-            "agent", "cloud_init", "bao_secret_path", "tags", "created", "last_updated",
+            "agent", "cloud_init", "cpu_units", "balloon", "memory_shares", "bao_secret_path", "tags", "created", "last_updated",
         )
         default_columns = (
             "virtual_machine", "guest_type", "vmid", "node", "storage", "onboot", "unprivileged",

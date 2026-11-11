@@ -19,7 +19,7 @@ Secrets are never stored: only an OpenBao path and ``has_*`` existence flags.
 """
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.urls import reverse
 from netbox.models import NetBoxModel
@@ -330,6 +330,14 @@ class GuestProfile(NetBoxModel):
                   "the description is visible to anyone with PVE read access.",
     )
 
+    # --- scheduling priority (both kinds) ---
+    cpu_units = models.PositiveIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(262144)],
+        help_text="PVE cpuunits: the guest's CPU weight against its node's other guests (cgroup "
+                  "v2 default 100). 1 is the lowest priority. Blank leaves PVE's default.",
+    )
+
     # --- credentials: references and existence only, never values ---
     bao_secret_path = models.CharField(
         max_length=255, blank=True,
@@ -387,6 +395,17 @@ class GuestProfile(NetBoxModel):
     cloud_init = models.BooleanField(
         default=False, help_text="Provision the guest via cloud-init."
     )
+    balloon = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="KVM balloon target in MiB: the least memory the host may squeeze the guest to "
+                  "under memory pressure. Below the VM's memory enables auto-ballooning; 0 "
+                  "disables the balloon device. Blank leaves PVE's default (balloon = memory).",
+    )
+    memory_shares = models.PositiveIntegerField(
+        null=True, blank=True, validators=[MaxValueValidator(50000)],
+        help_text="KVM auto-ballooning shares (default 1000): the guest's claim on host memory "
+                  "against other ballooning guests. 0 is the lowest priority. Needs balloon.",
+    )
 
     class Meta:
         ordering = ["virtual_machine"]
@@ -416,7 +435,8 @@ class GuestProfile(NetBoxModel):
         }
         vm_only = {
             "image": self.image, "iso": self.iso, "bios": self.bios, "cpu_type": self.cpu_type,
-            "numa": self.numa, "agent": self.agent,
+            "numa": self.numa, "agent": self.agent, "balloon": self.balloon,
+            "memory_shares": self.memory_shares,
         }
         if self.guest_type == GuestTypeChoices.CONTAINER:
             offenders = sorted(k for k, v in vm_only.items() if v not in (None, "", False, []))
@@ -432,6 +452,16 @@ class GuestProfile(NetBoxModel):
                 raise ValidationError(
                     {k: "Not applicable to a KVM guest." for k in offenders}
                 )
+        if self.memory_shares is not None and not self.balloon:
+            raise ValidationError(
+                {"memory_shares": "Set balloon below the VM's memory: shares only weigh "
+                                  "auto-ballooning guests."}
+            )
+        memory = self.virtual_machine.memory if self.virtual_machine_id else None
+        if self.balloon and memory and self.balloon > memory:
+            raise ValidationError(
+                {"balloon": f"Cannot exceed the VM's memory ({memory} MiB)."}
+            )
         if self.sandbox_of_id and self.sandbox_of_id == self.virtual_machine_id:
             raise ValidationError({"sandbox_of": "A guest cannot be a sandbox of itself."})
         if self.backup_job_id:

@@ -104,7 +104,9 @@ class GuestProfileAPITest(*_CRUD):
             {"virtual_machine": make_vm("api-p5").pk, "guest_type": "vm", "vmid": 9101,
              "bios": "ovmf", "cpu_type": "host", "unprivileged": False},
             {"virtual_machine": make_vm("api-p6").pk, "guest_type": "container",
-             "storage": "local-lvm"},
+             "storage": "local-lvm", "cpu_units": 1},
+            {"virtual_machine": make_vm("api-p7").pk, "guest_type": "vm", "vmid": 9102,
+             "cpu_units": 1, "balloon": 2048, "memory_shares": 0},
         ]
 
 

@@ -129,6 +129,78 @@ class GuestProfileModelTest(TestCase):
             bios=PveBiosChoices.OVMF, cpu_type="host", agent=True, unprivileged=False,
         ).full_clean()
 
+    def test_priority_fields_round_trip(self):
+        vm = make_vm("kvm-prio")
+        vm.memory = 12288
+        vm.save()
+        p = GuestProfile.objects.create(
+            virtual_machine=vm, guest_type=GuestTypeChoices.VM,
+            cpu_units=1, balloon=2048, memory_shares=0,
+        )
+        p.full_clean()
+        p.refresh_from_db()
+        self.assertEqual((p.cpu_units, p.balloon, p.memory_shares), (1, 2048, 0))
+
+    def test_priority_defaults_are_unset(self):
+        p = GuestProfile.objects.create(virtual_machine=make_vm("kvm-def"),
+                                        guest_type=GuestTypeChoices.VM)
+        self.assertEqual((p.cpu_units, p.balloon, p.memory_shares), (None, None, None))
+
+    def test_cpu_units_applies_to_containers(self):
+        p = GuestProfile(virtual_machine=make_vm("ct-prio"), guest_type=GuestTypeChoices.CONTAINER,
+                         cpu_units=1)
+        p.full_clean()
+
+    def test_cpu_units_bounds(self):
+        for bad in (0, 262145):
+            p = GuestProfile(virtual_machine=make_vm(f"kvm-cpu-{bad}"),
+                             guest_type=GuestTypeChoices.VM, cpu_units=bad)
+            with self.assertRaises(ValidationError) as cm:
+                p.full_clean()
+            self.assertIn("cpu_units", cm.exception.message_dict)
+
+    def test_memory_shares_upper_bound(self):
+        vm = make_vm("kvm-shares-hi")
+        vm.memory = 4096
+        vm.save()
+        p = GuestProfile(virtual_machine=vm, guest_type=GuestTypeChoices.VM,
+                         balloon=1024, memory_shares=50001)
+        with self.assertRaises(ValidationError) as cm:
+            p.full_clean()
+        self.assertIn("memory_shares", cm.exception.message_dict)
+
+    def test_container_rejects_ballooning(self):
+        for field, value in (("balloon", 1024), ("memory_shares", 0)):
+            p = GuestProfile(virtual_machine=make_vm(f"ct-{field}"),
+                             guest_type=GuestTypeChoices.CONTAINER, **{field: value})
+            with self.assertRaises(ValidationError) as cm:
+                p.full_clean()
+            self.assertIn(field, cm.exception.message_dict)
+
+    def test_memory_shares_needs_balloon(self):
+        for balloon in (None, 0):
+            p = GuestProfile(virtual_machine=make_vm(f"kvm-nob-{balloon}"),
+                             guest_type=GuestTypeChoices.VM, balloon=balloon, memory_shares=0)
+            with self.assertRaises(ValidationError) as cm:
+                p.full_clean()
+            self.assertIn("memory_shares", cm.exception.message_dict)
+
+    def test_balloon_cannot_exceed_memory(self):
+        vm = make_vm("kvm-big-balloon")
+        vm.memory = 4096
+        vm.save()
+        p = GuestProfile(virtual_machine=vm, guest_type=GuestTypeChoices.VM, balloon=4097)
+        with self.assertRaises(ValidationError) as cm:
+            p.full_clean()
+        self.assertIn("balloon", cm.exception.message_dict)
+        p.balloon = 4096
+        p.full_clean()
+
+    def test_balloon_zero_disables_without_shares(self):
+        p = GuestProfile(virtual_machine=make_vm("kvm-b0"), guest_type=GuestTypeChoices.VM,
+                         balloon=0)
+        p.full_clean()
+
     def test_sandbox_of_self_rejected(self):
         p = GuestProfile(
             virtual_machine=self.vm, guest_type=GuestTypeChoices.CONTAINER, sandbox_of=self.vm

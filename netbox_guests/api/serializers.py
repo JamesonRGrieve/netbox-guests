@@ -94,6 +94,7 @@ class GuestProfileSerializer(NetBoxModelSerializer):
             "bao_secret_path", "has_admin_password", "has_admin_token", "has_db_password",
             "has_secret_key", "swap", "unprivileged", "features", "ostemplate", "template",
             "image", "iso", "bios", "cpu_type", "sockets", "numa", "agent", "cloud_init",
+            "cpu_units", "balloon", "memory_shares",
             "tags", "custom_fields", "created", "last_updated",
         ]
         brief_fields = ["id", "url", "display", "virtual_machine", "guest_type", "vmid"]

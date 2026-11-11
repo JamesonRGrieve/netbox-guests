@@ -15,7 +15,7 @@ interface. Everything else PVE needs is a **model owned by this plugin**:
 
 | Model | Scope | Holds |
 |---|---|---|
-| `GuestProfile` | OneToOne → VirtualMachine | guest kind, VMID, node, pool, storage, boot behaviour, the LXC half, the KVM half, OpenBao *references* |
+| `GuestProfile` | OneToOne → VirtualMachine | guest kind, VMID, node, pool, storage, boot behaviour, scheduling priority (`cpu_units` for both kinds; KVM `balloon` + `memory_shares`, shares needing a balloon below the VM's memory), the LXC half, the KVM half, OpenBao *references* |
 | `GuestInterfaceConfig` | OneToOne → VMInterface | `bridge` + explicit `gateway` — the only per-NIC facts with no native home |
 | `GuestMount` | FK → VirtualMachine | repeating `mpN` |
 | `GuestDevice` | FK → VirtualMachine | repeating `devN` / raw-LXC passthrough |

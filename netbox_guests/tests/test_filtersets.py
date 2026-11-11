@@ -103,7 +103,7 @@ class GuestProfileFilterSetTest(TestCase):
         )
         cls.kvm = GuestProfile.objects.create(
             virtual_machine=make_vm("f-kvm"), guest_type="vm", vmid=7002,
-            cpu_type="host", unprivileged=False,
+            cpu_type="host", unprivileged=False, cpu_units=1, balloon=2048, memory_shares=0,
         )
 
     def _f(self, params):
@@ -125,6 +125,13 @@ class GuestProfileFilterSetTest(TestCase):
 
     def test_by_onboot(self):
         self.assertEqual(list(self._f({"onboot": True})), [self.ct])
+
+    def test_by_priority(self):
+        # Query-string values, as the API receives them: a bare int 0 is dropped as empty by the
+        # multi-value number field, the string "0" is not.
+        self.assertEqual(list(self._f({"cpu_units": ["1"]})), [self.kvm])
+        self.assertEqual(list(self._f({"memory_shares": ["0"]})), [self.kvm])
+        self.assertEqual(list(self._f({"balloon": ["2048"]})), [self.kvm])
 
     def test_by_protection(self):
         self.assertEqual(list(self._f({"protection": True})), [self.ct])
