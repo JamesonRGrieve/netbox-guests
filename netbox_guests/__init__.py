@@ -18,9 +18,13 @@ This is "native" in the sense of real, typed, queryable NetBox objects -- NOT th
 SECRET POLICY: the guest root credential is referenced by an OpenBao **path** custom field
 (``root_credential_bao_path``); the password value is NEVER stored in NetBox.
 """
+from importlib.metadata import version as _dist_version
+
 from netbox.plugins import PluginConfig
 
-__version__ = "0.0.1"
+# One source of truth: pyproject.toml's version, read from the installed distribution, so
+# /api/status/ reports the release that is actually deployed.
+__version__ = _dist_version("netbox-guests")
 
 
 class NetBoxGuestsConfig(PluginConfig):
