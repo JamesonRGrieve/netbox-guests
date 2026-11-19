@@ -82,7 +82,8 @@ class GuestProfileFilterSet(NetBoxModelFilterSet):
     class Meta:
         model = GuestProfile
         fields = [
-            "id", "vmid", "pool", "storage", "onboot", "start", "protection", "bao_secret_path",
+            "id", "vmid", "pool", "storage", "onboot", "start", "protection", "manage_journald",
+            "bao_secret_path",
             "has_admin_password", "has_admin_token", "has_db_password", "has_secret_key",
             "swap", "unprivileged", "ostemplate", "template", "image", "iso", "cpu_type",
             "sockets", "numa", "agent", "cloud_init", "cpu_units", "balloon", "memory_shares",

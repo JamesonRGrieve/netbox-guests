@@ -113,7 +113,8 @@ NetBox holds the structure; OpenBao holds the secret.
   on `GuestInterfaceConfig` (the only homeless net fields).
 - **PVE scalars (`GuestProfile` columns):** `vmid` (unique fleet-wide), `node` (FK → `dcim.Device`,
   PROTECT), `pool`, `storage`, `onboot`, `start`, `sandbox_of` (FK → the prod guest this copies),
-  `description_template`; LXC: `swap`, `unprivileged` (default **true**), `features`, `ostemplate`;
+  `description_template`, `manage_journald` (bool, default false, `db_default`; the pipeline
+  manages the guest's journald drop-in only where true; migration 0012); LXC: `swap`, `unprivileged` (default **true**), `features`, `ostemplate`;
   KVM: `template`, `image`, `iso`, `bios`, `cpu_type`, `sockets`, `numa`, `agent`, `cloud_init`.
 - **Credentials:** `bao_secret_path` plus `has_admin_password` / `has_admin_token` /
   `has_db_password` / `has_secret_key`. A path and four existence flags — never a value.

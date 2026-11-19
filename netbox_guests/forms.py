@@ -72,7 +72,7 @@ class GuestProfileForm(NetBoxModelForm):
 
     fieldsets = (
         FieldSet("virtual_machine", "guest_type", "vmid", "node", "pool", "storage",
-                 "onboot", "start", "protection", "backup_job", name="Guest"),
+                 "onboot", "start", "protection", "manage_journald", "backup_job", name="Guest"),
         FieldSet("swap", "unprivileged", "features", "ostemplate", name="Container (LXC)"),
         FieldSet("template", "image", "iso", "bios", "cpu_type", "sockets", "numa", "agent",
                  "cloud_init", name="Virtual machine (KVM)"),
@@ -86,7 +86,7 @@ class GuestProfileForm(NetBoxModelForm):
         model = GuestProfile
         fields = [
             "virtual_machine", "guest_type", "vmid", "node", "pool", "storage", "onboot",
-            "start", "protection", "backup_job", "swap", "unprivileged", "features", "ostemplate",
+            "start", "protection", "manage_journald", "backup_job", "swap", "unprivileged", "features", "ostemplate",
             "template", "image", "iso", "bios", "cpu_type", "sockets", "numa", "agent",
             "cloud_init", "cpu_units", "balloon", "memory_shares", "bao_secret_path",
             "has_admin_password", "has_admin_token", "has_db_password",
@@ -109,6 +109,7 @@ class GuestProfileFilterForm(NetBoxModelFilterSetForm):
     bios = forms.MultipleChoiceField(choices=PveBiosChoices, required=False)
     onboot = forms.NullBooleanField(required=False)
     protection = forms.NullBooleanField(required=False)
+    manage_journald = forms.NullBooleanField(required=False)
     unprivileged = forms.NullBooleanField(required=False)
     tag = TagFilterField(GuestProfile)
 

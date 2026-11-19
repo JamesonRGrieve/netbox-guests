@@ -89,7 +89,7 @@ class GuestProfileSerializer(NetBoxModelSerializer):
         model = GuestProfile
         fields = [
             "id", "url", "display", "virtual_machine", "guest_type", "vmid", "node", "pool",
-            "storage", "onboot", "start", "protection", "sandbox_of", "backup_job",
+            "storage", "onboot", "start", "protection", "manage_journald", "sandbox_of", "backup_job",
             "description_template",
             "bao_secret_path", "has_admin_password", "has_admin_token", "has_db_password",
             "has_secret_key", "swap", "unprivileged", "features", "ostemplate", "template",

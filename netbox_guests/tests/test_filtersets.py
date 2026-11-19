@@ -133,6 +133,11 @@ class GuestProfileFilterSetTest(TestCase):
         self.assertEqual(list(self._f({"memory_shares": ["0"]})), [self.kvm])
         self.assertEqual(list(self._f({"balloon": ["2048"]})), [self.kvm])
 
+    def test_by_manage_journald(self):
+        GuestProfile.objects.filter(pk=self.kvm.pk).update(manage_journald=True)
+        self.assertEqual(list(self._f({"manage_journald": True})), [self.kvm])
+        self.assertEqual(list(self._f({"manage_journald": False})), [self.ct])
+
     def test_by_protection(self):
         self.assertEqual(list(self._f({"protection": True})), [self.ct])
         self.assertEqual(list(self._f({"protection": False})), [self.kvm])

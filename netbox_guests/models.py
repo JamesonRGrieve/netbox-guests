@@ -313,6 +313,12 @@ class GuestProfile(NetBoxModel):
         help_text="PVE protection flag: the guest and its disks cannot be removed until it is "
                   "cleared. Set on control-plane guests.",
     )
+    manage_journald = models.BooleanField(
+        default=False,
+        db_default=False,
+        help_text="The pipeline manages this guest's journald drop-in. Off by default: only guests "
+                  "flagged here get one.",
+    )
     sandbox_of = models.ForeignKey(
         "virtualization.VirtualMachine", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="sandbox_guests",

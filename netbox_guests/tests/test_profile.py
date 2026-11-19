@@ -49,6 +49,21 @@ class GuestProfileModelTest(TestCase):
         db_default = GuestProfile._meta.get_field("protection").db_default
         self.assertIs(getattr(db_default, "value", db_default), False)
 
+    def test_manage_journald_defaults_off_with_a_database_default(self):
+        p = GuestProfile.objects.create(virtual_machine=make_vm("ct-jd"), guest_type=GuestTypeChoices.CONTAINER)
+        p.refresh_from_db()
+        self.assertIs(p.manage_journald, False)
+        db_default = GuestProfile._meta.get_field("manage_journald").db_default
+        self.assertIs(getattr(db_default, "value", db_default), False)
+
+    def test_manage_journald_applies_to_both_guest_kinds(self):
+        for name, kind in (("ct-jd2", GuestTypeChoices.CONTAINER), ("vm-jd2", GuestTypeChoices.VM)):
+            p = GuestProfile(virtual_machine=make_vm(name), guest_type=kind, manage_journald=True)
+            p.full_clean()
+            p.save()
+            p.refresh_from_db()
+            self.assertIs(p.manage_journald, True)
+
     def test_protection_applies_to_both_guest_kinds(self):
         kinds = (("ct-prot", GuestTypeChoices.CONTAINER), ("vm-prot", GuestTypeChoices.VM))
         for name, kind in kinds:

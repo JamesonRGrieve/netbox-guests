@@ -46,6 +46,7 @@ class GuestProfileTable(NetBoxTable):
     onboot = columns.BooleanColumn()
     start = columns.BooleanColumn()
     protection = columns.BooleanColumn()
+    manage_journald = columns.BooleanColumn()
     unprivileged = columns.BooleanColumn()
     numa = columns.BooleanColumn()
     agent = columns.BooleanColumn()
@@ -56,7 +57,8 @@ class GuestProfileTable(NetBoxTable):
         model = GuestProfile
         fields = (
             "pk", "id", "virtual_machine", "guest_type", "vmid", "node", "pool", "storage",
-            "onboot", "start", "protection", "sandbox_of", "backup_job", "swap", "unprivileged",
+            "onboot", "start", "protection", "manage_journald", "sandbox_of", "backup_job", "swap",
+            "unprivileged",
             "features",
             "ostemplate", "template", "image", "iso", "bios", "cpu_type", "sockets", "numa",
             "agent", "cloud_init", "cpu_units", "balloon", "memory_shares", "bao_secret_path", "tags", "created", "last_updated",

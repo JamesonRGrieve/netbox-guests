@@ -100,7 +100,8 @@ class GuestProfileAPITest(*_CRUD):
                 vmid=9000 + i, node=node, storage="local-zfs",
             )
         cls.create_data = [
-            {"virtual_machine": make_vm("api-p4").pk, "guest_type": "container", "vmid": 9100},
+            {"virtual_machine": make_vm("api-p4").pk, "guest_type": "container", "vmid": 9100,
+             "manage_journald": True},
             {"virtual_machine": make_vm("api-p5").pk, "guest_type": "vm", "vmid": 9101,
              "bios": "ovmf", "cpu_type": "host", "unprivileged": False},
             {"virtual_machine": make_vm("api-p6").pk, "guest_type": "container",
@@ -108,6 +109,27 @@ class GuestProfileAPITest(*_CRUD):
             {"virtual_machine": make_vm("api-p7").pk, "guest_type": "vm", "vmid": 9102,
              "cpu_units": 1, "balloon": 2048, "memory_shares": 0},
         ]
+
+
+    def test_patch_only_manage_journald(self):
+        # The pipeline's writes (card 393) PATCH this one key; nothing else on the row may move.
+        self.add_permissions("netbox_guests.view_guestprofile", "netbox_guests.change_guestprofile")
+        profile = GuestProfile.objects.get(vmid=9000)
+        url = self._get_detail_url(profile)
+        before = self.client.get(url, **self.header).data
+        self.assertIs(before["manage_journald"], False)
+        response = self.client.patch(url, {"manage_journald": True}, format="json", **self.header)
+        self.assertEqual(response.status_code, 200, response.data)
+        after = self.client.get(url, **self.header).data
+        self.assertIs(after["manage_journald"], True)
+        moved = {k for k in before if before[k] != after[k]} - {"manage_journald", "last_updated"}
+        self.assertEqual(moved, set())
+
+    def test_filter_by_manage_journald(self):
+        self.add_permissions("netbox_guests.view_guestprofile")
+        GuestProfile.objects.filter(vmid=9001).update(manage_journald=True)
+        response = self.client.get(f"{self._get_list_url()}?manage_journald=true", **self.header)
+        self.assertEqual([r["vmid"] for r in response.data["results"]], [9001])
 
 
 class BackupJobAPITest(*_CRUD):
