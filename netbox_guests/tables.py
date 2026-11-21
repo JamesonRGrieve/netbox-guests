@@ -75,6 +75,7 @@ class BackupJobTable(NetBoxTable):
     enabled = columns.BooleanColumn()
     repeat_missed = columns.BooleanColumn()
     notification_mode = columns.ChoiceFieldColumn()
+    pbs_change_detection_mode = columns.ChoiceFieldColumn(verbose_name="PBS change detection")
     vmids = tables.Column(verbose_name="VMIDs", orderable=False)
     tags = columns.TagColumn(url_name="plugins:netbox_guests:backupjob_list")
 
@@ -82,7 +83,7 @@ class BackupJobTable(NetBoxTable):
         model = BackupJob
         fields = (
             "pk", "id", "node", "job_id", "storage", "schedule", "mode", "enabled",
-            "notes_template", "repeat_missed", "notification_mode", "vmids",
+            "notes_template", "repeat_missed", "notification_mode", "pbs_change_detection_mode", "vmids",
             "description", "tags", "created", "last_updated",
         )
         default_columns = ("node", "job_id", "storage", "schedule", "mode", "enabled", "vmids")

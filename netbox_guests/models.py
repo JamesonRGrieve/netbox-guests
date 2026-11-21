@@ -25,7 +25,8 @@ from django.urls import reverse
 from netbox.models import NetBoxModel
 
 from .choices import (
-    BackupModeChoices, BackupNotificationModeChoices, DeviceKindChoices, GuestTypeChoices,
+    BackupChangeDetectionModeChoices, BackupModeChoices, BackupNotificationModeChoices, DeviceKindChoices,
+    GuestTypeChoices,
     LxcFeatureChoices, PveBiosChoices, PveStorageTypeChoices,
 )
 
@@ -177,6 +178,11 @@ class BackupJob(NetBoxModel):
     notification_mode = models.CharField(
         max_length=32, choices=BackupNotificationModeChoices,
         default=BackupNotificationModeChoices.AUTO, help_text="How PVE reports the outcome.",
+    )
+    pbs_change_detection_mode = models.CharField(
+        max_length=16, choices=BackupChangeDetectionModeChoices, blank=True, default="", db_default="",
+        help_text="How container backups to PBS find changed files; blank keeps PVE's default (legacy). "
+        "metadata reuses unchanged files from the previous snapshot.",
     )
     description = models.CharField(max_length=255, blank=True)
 

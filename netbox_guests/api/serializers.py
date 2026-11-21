@@ -57,7 +57,7 @@ class BackupJobSerializer(NetBoxModelSerializer):
         model = BackupJob
         fields = (
             "id", "url", "display", "node", "job_id", "storage", "schedule", "mode", "enabled",
-            "notes_template", "repeat_missed", "notification_mode", "vmids",
+            "notes_template", "repeat_missed", "notification_mode", "pbs_change_detection_mode", "vmids",
             "description", "tags", "custom_fields", "created", "last_updated",
         )
         brief_fields = ("id", "url", "display", "node", "job_id")

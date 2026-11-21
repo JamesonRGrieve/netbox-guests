@@ -6,7 +6,8 @@ from dcim.models import Device
 from ipam.models import IPAddress
 from virtualization.models import VMInterface, VirtualMachine
 from .choices import (
-    BackupModeChoices, DeviceKindChoices, GuestTypeChoices, PveBiosChoices, PveStorageTypeChoices,
+    BackupChangeDetectionModeChoices, BackupModeChoices, DeviceKindChoices, GuestTypeChoices, PveBiosChoices,
+    PveStorageTypeChoices,
 )
 from .models import (
     BackupJob, GuestDevice, GuestInterfaceConfig, GuestMount, GuestProfile, PveStorage,
@@ -105,6 +106,7 @@ class BackupJobFilterSet(NetBoxModelFilterSet):
         queryset=Device.objects.all(), label="PVE node (name)",
     )
     mode = django_filters.MultipleChoiceFilter(choices=BackupModeChoices)
+    pbs_change_detection_mode = django_filters.MultipleChoiceFilter(choices=BackupChangeDetectionModeChoices)
 
     class Meta:
         model = BackupJob

@@ -19,7 +19,7 @@ interface. Everything else PVE needs is a **model owned by this plugin**:
 | `GuestInterfaceConfig` | OneToOne → VMInterface | `bridge` + explicit `gateway` — the only per-NIC facts with no native home |
 | `GuestMount` | FK → VirtualMachine | repeating `mpN` |
 | `GuestDevice` | FK → VirtualMachine | repeating `devN` / raw-LXC passthrough |
-| `BackupJob` | FK → node (`dcim.Device`) | a PVE scheduled vzdump job (`/cluster/backup/<id>`); its guest list is derived from `GuestProfile.backup_job`, never typed |
+| `BackupJob` | FK → node (`dcim.Device`) | a PVE scheduled vzdump job (`/cluster/backup/<id>`), including `pbs_change_detection_mode` (legacy/data/metadata, blank = PVE default); its guest list is derived from `GuestProfile.backup_job`, never typed |
 | `PveStorage` | FK → node (`dcim.Device`) | a PVE storage definition (`/storage/<id>`), today a PBS datastore: server (`ipam.IPAddress`), port, datastore, username, password's OpenBao path, public cert fingerprint |
 
 The 2026-06-17 decision put the PVE scalars in typed **custom fields**. They were typed, but they

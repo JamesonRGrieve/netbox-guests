@@ -64,6 +64,21 @@ class BackupModeChoices(ChoiceSet):
     )
 
 
+class BackupChangeDetectionModeChoices(ChoiceSet):
+    """How a container backup to PBS finds changed files (PVE ``pbs-change-detection-mode=``):
+    ``legacy`` re-reads every file into one archive, ``data`` re-reads every file into split
+    metadata/payload archives, ``metadata`` reuses unchanged files by their metadata from the previous
+    snapshot. Blank leaves PVE's default (legacy)."""
+    LEGACY = "legacy"
+    DATA = "data"
+    METADATA = "metadata"
+    CHOICES = (
+        (LEGACY, "Legacy", "gray"),
+        (DATA, "Data", "blue"),
+        (METADATA, "Metadata", "green"),
+    )
+
+
 class BackupNotificationModeChoices(ChoiceSet):
     """How PVE reports a backup job's outcome (``notification-mode=``)."""
     AUTO = "auto"

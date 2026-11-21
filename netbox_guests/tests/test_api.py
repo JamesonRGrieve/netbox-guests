@@ -148,7 +148,7 @@ class BackupJobAPITest(*_CRUD):
             {"node": node.pk, "job_id": "backup-new-1", "storage": "pbs", "schedule": "21:00"},
             {"node": node.pk, "job_id": "backup-new-2", "storage": "pbs", "schedule": "21:15",
              "mode": "suspend", "notes_template": "{{guestname}}",
-             "notification_mode": "notification-system"},
+             "notification_mode": "notification-system", "pbs_change_detection_mode": "metadata"},
             {"node": node.pk, "job_id": "backup-new-3", "storage": "local", "schedule": "sun 02:00",
              "enabled": False},
         ]

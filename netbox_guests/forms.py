@@ -120,14 +120,15 @@ class BackupJobForm(NetBoxModelForm):
     fieldsets = (
         FieldSet("node", "job_id", "storage", "schedule", "mode", "enabled", "description",
                  name="Backup job"),
-        FieldSet("notes_template", "repeat_missed", "notification_mode", name="Options"),
+        FieldSet("notes_template", "repeat_missed", "notification_mode", "pbs_change_detection_mode",
+                 name="Options"),
     )
 
     class Meta:
         model = BackupJob
         fields = (
             "node", "job_id", "storage", "schedule", "mode", "enabled", "notes_template",
-            "repeat_missed", "notification_mode", "description", "tags",
+            "repeat_missed", "notification_mode", "pbs_change_detection_mode", "description", "tags",
         )
 
 

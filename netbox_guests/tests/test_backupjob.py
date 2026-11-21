@@ -11,7 +11,9 @@ from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import TestCase
 
-from netbox_guests.choices import BackupModeChoices, BackupNotificationModeChoices, GuestTypeChoices
+from netbox_guests.choices import (
+    BackupChangeDetectionModeChoices, BackupModeChoices, BackupNotificationModeChoices, GuestTypeChoices,
+)
 from netbox_guests.models import BackupJob, GuestProfile
 
 from .test_profile import make_device
@@ -43,6 +45,7 @@ class BackupJobModelTest(TestCase):
         self.assertIn("/plugins/guests/backup-jobs/", job.get_absolute_url())
         self.assertEqual(job.mode, BackupModeChoices.SNAPSHOT)
         self.assertEqual(job.notification_mode, BackupNotificationModeChoices.AUTO)
+        self.assertEqual(job.pbs_change_detection_mode, "")
         self.assertTrue(job.enabled)
         self.assertFalse(job.repeat_missed)
         self.assertEqual(job.vmids, [])
@@ -85,6 +88,18 @@ class BackupJobModelTest(TestCase):
             notification_mode=BackupNotificationModeChoices.NOTIFICATION_SYSTEM,
         )
         job.full_clean()
+
+    def test_pbs_change_detection_mode_is_optional_and_validated(self):
+        for value in ("", *BackupChangeDetectionModeChoices.values()):
+            BackupJob(node=self.core, job_id="c", storage="pbs", schedule="21:00",
+                      pbs_change_detection_mode=value).full_clean()
+        job = BackupJob(node=self.core, job_id="c", storage="pbs", schedule="21:00",
+                        pbs_change_detection_mode="bogus")
+        with self.assertRaises(ValidationError):
+            job.full_clean()
+        saved = make_job(self.backup, job_id="c", pbs_change_detection_mode=BackupChangeDetectionModeChoices.METADATA)
+        saved.refresh_from_db()
+        self.assertEqual(saved.pbs_change_detection_mode, "metadata")
 
 
 class GuestProfileBackupJobTest(TestCase):
